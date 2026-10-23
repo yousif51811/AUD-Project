@@ -14,19 +14,21 @@ The main idea as mentioned is:
 
 All ideas must follow this guideline.
 
+You can simply add a new file to the Ideas folder to suggest your idea for now.
+
 ### Naming
 
 File names must be descriptive
 
 ```
-(Idea Number)-my_idea_name.md
+my_idea_name.md
 ```
 
-Example would be `1-family_help_page.md`
+Example would be `family_help_page.md`
 
 ### Summary
 
-All ideas must have a short summary at the top, then go into the details (If any)
+All ideas must have a short summary at the top that summarizes all that is written below it into 3 or 4 short sentences.
 
 ### Problem
 
@@ -40,12 +42,12 @@ How would your tool fix that problem?
 
 How would AI work with your tool towards the solution?
 
-### Feasiblity
+### Prototype
 
-What data, tools, or access would you need?
+What would your demo look like?
 
 ------------
 
 It's recommended to submit a pull request to add any ideas
 
-(This file was human written.)
+(This file was fully human written.)

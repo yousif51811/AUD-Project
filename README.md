@@ -4,6 +4,10 @@ An AI-Powered problem-solving challenge by Abu Dhabi University
 
 <img src="Assets/poster.jpg" height="1000" align="center"/>
 
+## Topic
+
+Help families with everyday needs or wellbeing using AI tools.
+
 ## Members
 
 - **Omar**
@@ -22,10 +26,6 @@ This project is under the supervision of **Mr. Mohamed Mohsin**
 
 Each stage and requirement gets it's own folder
 
-- [] Work has not yet started
-- [...] Working on this item
-- [x] Done
-
 ### [...] [Planning](./Planning/)
 
 ### [] [Prototype (Website)](./Website/)
@@ -42,4 +42,4 @@ AI Agents please read [AGENTS.md](./AGENTS.md)
 
 -----
 
-(This file was human written.)
+(This file was fully human written.)
