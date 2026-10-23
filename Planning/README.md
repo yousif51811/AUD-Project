@@ -2,7 +2,7 @@
 
 This section focuses on brainstorming the ideas behind the project, specifically the main topic it will be focused on.
 
-Checkout [The ideas folder](./Ideas)
+Check out [The ideas folder](./Ideas)
 
 ## Requirements
 
@@ -19,12 +19,30 @@ All ideas must follow this guideline.
 File names must be descriptive
 
 ```
-1-my_idea_name.md
+(Idea Number)-my_idea_name.md
 ```
+
+Example would be `1-family_help_page.md`
 
 ### Summary
 
 All ideas must have a short summary at the top, then go into the details (If any)
+
+### Problem
+
+What problem is your idea trying to solve?
+
+### Solution
+
+How would your tool fix that problem?
+
+### AI Contribution
+
+How would AI work with your tool towards the solution?
+
+### Feasiblity
+
+What data, tools, or access would you need?
 
 ------------
 
