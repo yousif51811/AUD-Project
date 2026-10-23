@@ -29,13 +29,13 @@ Each stage and requirement gets it's own folder
 
 ### [...] [Planning](./Planning/)
 
-### [] [Prototype (Website)](./Website/)
+### [ ] [Prototype (Website)](./Website/)
 
-### [] [Presentation](./Presentation/)
+### [ ] [Presentation](./Presentation/)
 
-### [] [Video](./Video/)
+### [ ] [Video](./Video/)
 
-### [] [Report](./Report/)
+### [ ] [Report](./Report/)
 
 ## Agents
 
