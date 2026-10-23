@@ -2,7 +2,7 @@
 
 An AI-Powered problem-solving challenge by Abu Dhabi University
 
-<img src="Assets/poster.jpg" height="1000" align="center"/>
+<img src="Assets/poster.jpg" height="500" align="center"/>
 
 ## Topic
 
