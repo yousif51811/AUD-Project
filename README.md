@@ -2,8 +2,9 @@
 
 An AI-Powered problem-solving challenge by Abu Dhabi University
 <div align="center">
-  <img src="Assets/poster.jpg" height="800"/>
+  <img src="Assets/poster.jpg" height="1000"/>
 </div>
+
 ## Topic
 
 Help families with everyday needs or wellbeing using AI tools.
