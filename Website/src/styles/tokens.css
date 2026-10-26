@@ -1,0 +1,19 @@
+/* FamilyMind: warm paper, garden green, and a little terracotta. */
+:root {
+  --ink:#29352f; --navy:#2d493a; --royal:#315a45; --red:#b84535; --gold:#e6b967;
+  --teal:#b9d7b9; --blue:#b7d3df; --violet:#d5c9df; --white:#fffefb;
+  --canvas:#f8f7f2; --border:#dcded4; --muted:#667066; --success:#41734e; --warning:#9b6d21; --danger:#a64032;
+  --teal-ink:#315d48; --gold-ink:#75501c; --blue-ink:#3a5b6b; --violet-ink:#675073; --red-ink:#a03d32; --success-ink:#365b3e;
+  --text:#29312c; --text-soft:#566154; --surface:#fffefb; --surface-2:#f0f1e9; --focus:#496f43;
+  --font-display:Georgia,'Times New Roman',serif;
+  --font-body:'Inter Variable',Inter,system-ui,sans-serif;
+  --fs-xs:0.8125rem; --fs-sm:0.875rem; --fs-base:1rem; --fs-lg:1.125rem;
+  --fs-xl:1.5rem; --fs-2xl:clamp(1.875rem,3vw,2.5rem); --fs-3xl:clamp(2.5rem,4vw,3.75rem); --fs-hero:clamp(3.5rem,5.5vw,5.75rem);
+  --r-card:12px; --r-ctl:8px; --r-sm:6px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px; --s9:96px;
+  --shadow-1:0 2px 4px #29352f03; --shadow-2:0 6px 20px #29352f0b; --shadow-3:0 20px 65px #29352f20;
+  --ease:cubic-bezier(.22,.8,.28,1); --t-fast:140ms; --t-mid:250ms; --t-slow:400ms;
+  --header-h:76px; --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+.pref-large-text {font-size:112.5%;}
+.pref-high-contrast {--muted:#3e493d;--border:#788272;--text-soft:#333c32;}

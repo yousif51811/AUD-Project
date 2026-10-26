@@ -4,7 +4,7 @@
 
 This repository is a student team project for Abu Dhabi University's 6th Annual COE STEM Programming with AI Competition. The theme is **AI for Family**: help families with everyday needs or wellbeing using AI tools.
 
-The team has exactly **five members**, listed in the root `README.md`. The project is currently in planning. The agreed order is to collect and compare ideas, choose an idea and define the prototype scope, then assign roles. Do not assign roles during brainstorming unless the user changes this decision. No idea, technology stack, or implementation approach has been selected. Do not treat a proposed idea as an approved decision. Do not start building the prototype unless the user's task authorizes it.
+The team has exactly **five members**, listed in the root `README.md`. A FamilyMind AI prototype now exists in `Website/`, using React, TypeScript, Vite, and npm; see `Website/README.md` for setup and checks. It runs offline with local browser storage and no live AI model. The user has authorized replacing the old UX completely. The website now has one warm family-planner presentation with Light, Dark and System appearance choices; the previous Original/Expressive switch, dark effects and cinematic intro have been removed. The existing offline logic and saved family data remain. See `Website/CHANGES.md` for the current implementation boundary. Its presence does not establish a documented team vote or role assignment. Do not treat a proposed idea as an approved decision or expand prototype scope without authorization. Do not assign roles during brainstorming unless the user changes this decision.
 
 ## Start every task here
 
@@ -19,7 +19,7 @@ Preserve the existing folder names and capitalization:
 
 - `Planning/`: brainstorming, idea proposals, and documented team decisions.
 - `Planning/Ideas/`: individual idea proposals. Create this folder when adding the first proposal if it is absent.
-- `Website/`: the prototype, once implementation is authorized.
+- `Website/`: the existing FamilyMind AI prototype.
 - `Presentation/`: slides, outline, and presentation material.
 - `Video/`: pitch script, recording plan, and video material.
 - `Report/`: written report and supporting evidence.
@@ -29,7 +29,7 @@ Do not introduce a new folder structure or framework just to complete an unrelat
 
 ## Proposing and choosing ideas
 
-Follow `Planning/README.md`, including its Summary, Problem, Solution, AI Contribution, and Feasibility requirements. Each idea must have a descriptive filename such as `1-my_idea_name.md` and a short summary at the top. Inspect existing filenames before choosing an unused number; do not rename teammates' proposals merely to reorder them.
+The current working tree has removed `Planning/README.md` and the earlier proposal; preserve those changes. If planning resumes, use Summary, Problem, Solution, AI Contribution, and Feasibility sections. Each idea must have a descriptive filename such as `1-my_idea_name.md` and a short summary at the top. Inspect existing filenames before choosing an unused number; do not rename teammates' proposals merely to reorder them.
 
 For a new proposal, cover these points briefly:
 
@@ -43,7 +43,7 @@ Keep proposals distinct from decisions. Do not invent votes, approvals, team rol
 
 ## Working together
 
-- Follow the current contribution guidance: `Planning/README.md` recommends pull requests for idea submissions. The root README no longer contains the earlier requirement for pull requests for all contributions. Prefer focused contribution branches and pull requests for shared work. Do not commit, push, open a pull request, or merge unless the user requests it or has already authorized that workflow.
+- Prefer focused contribution branches and pull requests for shared work. Do not commit, push, open a pull request, or merge unless the user requests it or has already authorized that workflow.
 - Avoid unrelated rewrites, large formatting changes, and changes to teammates' files that are not needed for the task.
 - Never discard changes, force-push, or rewrite shared history without explicit authorization.
 - Write clear documentation that a teammate can understand without reading the AI conversation.
@@ -55,6 +55,12 @@ Keep proposals distinct from decisions. Do not invent votes, approvals, team rol
 Keep documentation in English. The user has withdrawn the request for Arabic translations; do not add bilingual text or translation credits unless requested again.
 
 ## Building the prototype
+
+Use the single family-planner presentation in `Website/src/components/family/` and `Website/src/styles/family.css`. Keep the warm paper-and-garden identity, readable typography, simple navigation, and action-focused layouts consistent in both palettes. Appearance uses `familymind:appearance:v1`, independently of family data, and defaults to the system preference. The header uses one sun/moon button for manual switching; the family menu restores automatic device mode. Keep short entrance/theme/icon animations responsive to both device and household reduced-motion settings. Do not reintroduce separate layout variants, dark aurora effects, cinematic intros, or simulated AI streaming unless requested. Preserve `familymind:v1:*` data and the existing offline calculations. Sharing settings are demonstrative: this single-browser prototype has no member accounts or access controls.
+
+Run `npm test`, `npm run typecheck`, and `npm run build` from `Website/`. For presentation changes, check all routes in Light and Dark at 360, 768 and 1440 pixels, keyboard/modal behavior, text contrast and reduced motion; see `Website/VERIFICATION.md`. Do not copy platform-specific dependencies between machines; reinstall with `npm ci`.
+
+For local previews, honor the user's request for automatic shutdown: run the server with a finite lifetime (for example, `timeout --signal=TERM --kill-after=10s 1h npm run dev -- --host 127.0.0.1`). Use a Vite-compatible Node version (20.19+ or 22.12+); copied Windows dependencies may need reinstalling on Linux. Keep the server local unless broader access is requested.
 
 When implementation begins, read the chosen idea and existing code first. Use the established stack and package manager. If none exists, explain the proposed choice before introducing substantial dependencies or paid services.
 

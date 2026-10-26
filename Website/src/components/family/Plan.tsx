@@ -1,0 +1,51 @@
+import { useState } from 'react';
+import { Check, Clock, Plus, Printer, SlidersHorizontal, ArrowUpRight, Pencil, Repeat2, RefreshCw } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useApp } from '@/state/store';
+import { useToast } from '@/components/shared/Toast';
+import { EditDialog, PrintPlan } from '@/components/plan/PlanTools';
+import { DAY_NAMES } from '@/lib/time';
+import { CATEGORY_LABELS, EMPTY_FILTERS, filterActions, type ActionFilters } from '@/lib/actions';
+import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { Modal } from '@/components/shared/Modal';
+import { alternativesFor, replaceAction, regenerateAction, setReduced } from '@/lib/plan';
+import { Switch } from '@/components/shared/Common';
+import type { PlanAction } from '@/types';
+export function FamilyPlan() {
+  useDocumentTitle('Your weekly plan');
+  const app = useApp(); const { toast } = useToast();
+  const [editing, setEditing] = useState<PlanAction | 'new' | null>(null);
+  const [replacing, setReplacing] = useState<PlanAction | null>(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [filters, setFilters] = useState<ActionFilters>({ ...EMPTY_FILTERS });
+  const actions = app.plan?.actions ?? [];
+  const filtered = filterActions(actions, filters);
+  const set = <K extends keyof ActionFilters>(key: K, value: ActionFilters[K]) => setFilters((f) => ({ ...f, [key]: value }));
+  return <div className="family-plan stack stack-lg">
+    <header className="planner-heading"><div><p className="eyebrow">ONE SHARED PLAN</p><h1 tabIndex={-1} data-page-heading>Our week.</h1><p className="lede">A little structure for the week. Change anything that doesn’t fit.</p></div><button className="btn btn-primary" type="button" onClick={() => setEditing('new')}><Plus size={18} /> Add an action</button></header>
+    <div className="family-plan-summary"><div><strong>{actions.filter((a) => a.done).length}<span className="muted"> / {actions.length}</span></strong><span className="small muted">actions complete</span></div><div><strong>{actions.reduce((n,a) => n + a.minutes,0)} <small>min</small></strong><span className="small muted">planned this week</span></div><div><strong>{app.profile?.preferences.maxDailyMinutes ?? 90} <small>min/day</small></strong><span className="small muted">your daily limit</span></div><button type="button" className="btn btn-secondary" onClick={() => window.print()}><Printer size={16} /> Print plan</button></div>
+    <details className="family-filters" aria-label="Plan filters"><summary>Filter the plan <span>{filtered.length} of {actions.length} actions shown</span></summary><div className="stack"><div className="between row"><h2 className="card-title"><SlidersHorizontal size={18} /> Show me</h2><button className="btn btn-ghost btn-sm" type="button" onClick={() => setFilters({ ...EMPTY_FILTERS })}>Reset filters</button></div>
+      <div className="family-filter-grid">
+        <label className="field">Day<select className="select" value={filters.day} onChange={(e) => set('day', e.target.value === 'all' ? 'all' : Number(e.target.value) as ActionFilters['day'])}><option value="all">All days</option>{DAY_NAMES.map((d,i) => <option value={i} key={d}>{d}</option>)}</select></label>
+        <label className="field">Participant<select className="select" value={filters.person} onChange={(e) => set('person',e.target.value)}><option value="all">Everyone</option>{app.profile?.members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
+        <label className="field">Category<select className="select" value={filters.category} onChange={(e) => set('category',e.target.value as ActionFilters['category'])}><option value="all">All categories</option>{Object.entries(CATEGORY_LABELS).map(([id,label]) => <option key={id} value={id}>{label}</option>)}</select></label>
+        <label className="field">Status<select className="select" value={filters.status} onChange={(e) => set('status',e.target.value as ActionFilters['status'])}><option value="all">All actions</option><option value="open">To do</option><option value="done">Completed</option></select></label>
+      </div><div className="cluster"><span className="small muted">Saved automatically on this browser.</span><button type="button" className="btn btn-ghost btn-sm" onClick={() => setConfirmReset(true)}>Make a new plan</button></div><p className="xs muted" role="status">{filtered.length} of {actions.length} actions match</p>
+      {app.plan && <Switch checked={app.plan.reduced} onChange={(v) => app.updatePlan((p) => setReduced(p,v))} label="Reduce workload" description="Keep one action per day; pause the rest until you turn this off." />}
+      {!!app.plan?.parked.length && <p className="small muted">{app.plan.parked.length} actions paused by Reduce workload.</p>}
+    </div></details>
+    {!actions.length && <div className="family-empty card"><h2>Start with one small thing.</h2><p className="muted">Add an action yourself, or build a plan from your check-in.</p><div className="cluster"><button type="button" className="btn btn-primary" onClick={() => setEditing('new')}>Add your first action</button><button type="button" className="btn btn-secondary" onClick={() => { app.regeneratePlan(); toast('Weekly plan generated.'); }}>Generate a weekly plan</button></div><Link to="/assessment">Take the family check-in <ArrowUpRight size={14} /></Link></div>}
+    {!!actions.length && !filtered.length && <p className="card">No actions match these filters. Try another combination or reset filters.</p>}
+    <div className="family-week-list">{DAY_NAMES.map((day,d) => {
+      const list = filtered.filter((a) => a.day === d);
+      if (filters.day !== 'all' && filters.day !== d) return null;
+      if (actions.length && !list.length && (filters.person !== 'all' || filters.category !== 'all' || filters.status !== 'all')) return null;
+      return <section key={day} className={`card family-day${d === app.today ? ' is-today' : ''}`} aria-label={`${day} actions`}><div className="week-day-label"><span className="day-initial">{day.slice(0,3)}</span>{d === app.today && <span className="pill pill-info">Today</span>}</div>{!list.length && <p className="small muted">No plans. A little room to breathe.</p>}<ul className="family-task-list">{list.map((a) => <li key={a.id} className={a.done ? 'is-done' : ''}>
+        <label className="family-task-check"><input type="checkbox" checked={a.done} onChange={() => app.toggleAction(a.id)} aria-label={`Mark complete: ${a.title}`} /><span><Check size={14} /></span></label><div className="stack stack-sm"><strong>{a.title}</strong><span className="xs muted"><Clock size={12} /> {a.minutes} min · {CATEGORY_LABELS[a.category]}</span><span className="xs muted">{a.participantIds.map((id) => app.profile?.members.find((m) => m.id === id)?.name).filter(Boolean).join(', ') || 'Family action'}</span><details><summary className="xs">Why this action?</summary><p className="small muted">{a.reason}</p></details><div className="cluster"><button type="button" className="btn btn-ghost btn-sm" onClick={() => setEditing(a)} aria-label={`Edit: ${a.title}`}><Pencil size={13} /> Edit</button><button type="button" className="btn btn-ghost btn-sm" onClick={() => setReplacing(a)} aria-label={`Replace: ${a.title}`}><Repeat2 size={13} /> Replace</button><button type="button" className="btn btn-ghost btn-sm" onClick={() => { app.updatePlan((p) => regenerateAction(p,a.id)); toast('Action regenerated.'); }} aria-label={`Regenerate: ${a.title}`}><RefreshCw size={13} /> Refresh idea</button></div></div></li>)}</ul></section>;
+    })}</div>
+    <Modal open={confirmReset} title="Make a new weekly plan?" description="This replaces your current actions with suggestions from your check-in. Your manual edits and completion marks will be replaced." onClose={() => setConfirmReset(false)} footer={<><button type="button" className="btn btn-secondary" onClick={() => setConfirmReset(false)}>Keep current plan</button><button type="button" className="btn btn-primary" onClick={() => { app.regeneratePlan(); setConfirmReset(false); toast('Plan regenerated.'); }}>Make a new plan</button></>}><p>Your household, check-in, and schedule stay saved.</p></Modal>
+    {replacing && <Modal open title="Choose another small step" onClose={() => setReplacing(null)}><div className="stack">{alternativesFor(replacing).map((alt) => <button type="button" className="btn btn-secondary" key={alt.title} onClick={() => { app.updatePlan((p) => replaceAction(p,replacing.id,alt)); setReplacing(null); toast('Action replaced.'); }}>{alt.title} · {alt.minutes} min</button>)}</div></Modal>}
+    <PrintPlan plan={actions} name={app.profile?.name ?? 'Family'} />
+    {editing && <EditDialog key={editing === 'new' ? 'new' : editing.id} target={editing} onClose={() => setEditing(null)} onDelete={(id) => { app.deleteAction(id); setEditing(null); toast('Action removed.'); }} onSave={(a,isNew) => { if (isNew) { const errors = app.addQuickAction(a); if (errors.length) { toast(errors.join(' '),'warn'); return; } } else app.editAction(a.id,a); setEditing(null); toast('Action saved on this device.'); }} />}
+  </div>;
+}

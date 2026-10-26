@@ -1,0 +1,35 @@
+/* Short, one-shot entrances. Content never depends on animation to become usable. */
+@keyframes planner-enter {
+  from {opacity:0;transform:translateY(8px);}
+  to {opacity:1;transform:none;}
+}
+@keyframes board-settle {
+  from {opacity:0;transform:translateY(12px) rotate(3deg);}
+  to {opacity:1;transform:rotate(1.4deg);}
+}
+.home-hero-copy > * {animation:planner-enter 480ms var(--ease) both;}
+.home-hero-copy > :nth-child(2) {animation-delay:45ms;}
+.home-hero-copy > :nth-child(3) {animation-delay:90ms;}
+.home-hero-copy > :nth-child(4) {animation-delay:135ms;}
+.home-hero-copy > :nth-child(5) {animation-delay:170ms;}
+.home-noticeboard {animation:board-settle 650ms var(--ease) both;animation-delay:100ms;}
+.family-main :is(.page-head,.planner-heading) {animation:planner-enter 350ms var(--ease) both;}
+.today-layout > :last-child {animation:planner-enter 450ms var(--ease) both;}
+.family-filters[open] > .stack,.trust-topic[open] > .tick-list {animation:planner-enter 200ms var(--ease);}
+.family-task-check > span {transition:background-color 180ms,border-color 180ms;}
+.family-task-check > span svg {opacity:0;transform:scale(.5);transition:transform 220ms var(--ease),opacity 140ms;}
+.family-task-check input:checked + span svg {opacity:1;transform:scale(1);}
+.family-task-list li strong {transition:color 180ms;}
+/* Color transitions run only when appearance changes, not on initial page load. */
+.theme-changing body,.theme-changing :is(.family-header,.family-bottom-nav,.card,.daily-paper,.family-sticky,.paper-calendar,.home-noticeboard,.board-note,.board-postcard,.home-tool,.home-end,.modal,.notice,.pill,.chip,.input,.textarea,.select,.btn,.choice-body,.event,.appearance-system) {
+  transition-property:background-color,border-color,color,box-shadow;
+  transition-duration:280ms;transition-timing-function:ease;
+}
+@media (prefers-reduced-motion:reduce) {
+  .home-hero-copy > *,.home-noticeboard,.family-main :is(.page-head,.planner-heading),.today-layout > :last-child,.family-filters[open] > .stack,.trust-topic[open] > .tick-list {animation:none;}
+  .appearance-toggle,.appearance-toggle > svg,.appearance-tooltip,.family-task-check > span,.family-task-check > span svg,.theme-changing body,.theme-changing * {transition:none !important;}
+  .appearance-toggle:hover,.appearance-toggle:active {transform:none;}
+}
+.pref-reduce-motion .home-hero-copy > *, .pref-reduce-motion .home-noticeboard,.pref-reduce-motion .family-main :is(.page-head,.planner-heading),.pref-reduce-motion .today-layout > :last-child,.pref-reduce-motion .family-filters[open] > .stack,.pref-reduce-motion .trust-topic[open] > .tick-list {animation:none;}
+.pref-reduce-motion .appearance-toggle,.pref-reduce-motion .appearance-toggle > svg,.pref-reduce-motion .appearance-tooltip,.pref-reduce-motion .family-task-check > span,.pref-reduce-motion .family-task-check > span svg,.pref-reduce-motion.theme-changing body,.pref-reduce-motion.theme-changing * {transition:none !important;}
+.pref-reduce-motion .appearance-toggle:hover,.pref-reduce-motion .appearance-toggle:active {transform:none;}

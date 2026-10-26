@@ -1,8 +1,9 @@
 <h1 align="center">6th Annual COE STEM Programming with AI Competition</h1>
 
 An AI-Powered problem-solving challenge by Abu Dhabi University
-
-<img src="Assets/poster.jpg" height="1000" align="center"/>
+<div align="center">
+    <img src="Assets/poster.jpg" height="1000" />
+</div>
 
 ## Topic
 

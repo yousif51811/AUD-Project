@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8f7f2" />
+    <meta name="description" content="FamilyMind AI connects the everyday signals a family chooses to share, explains what needs attention, and turns understanding into practical action." />
+    <script>
+      // Apply appearance before first paint; a blocked storage API still follows the device.
+      (() => {
+        let preference = 'system';
+        try { preference = localStorage.getItem('familymind:appearance:v1') || 'system'; } catch {}
+        const dark = preference === 'dark' || (preference !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches);
+        const theme = dark ? 'dark' : 'light';
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#1d231f' : '#f8f7f2';
+      })();
+    </script>
+    <title>FamilyMind — a place for the everyday</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>FamilyMind AI needs JavaScript to run. All data stays on your device.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
