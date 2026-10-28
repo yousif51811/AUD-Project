@@ -191,6 +191,7 @@ export type EventCategory =
   | 'Health Routine';
 
 export interface ScheduleEvent {
+  date?: string; // YYYY-MM-DD in household timezone; legacy imports map explicitly.
   id: string;
   title: string;
   day: DayIndex;

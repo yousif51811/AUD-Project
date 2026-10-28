@@ -1,8 +1,12 @@
 node_modules/
 dist/
-.vite/
-shots/
-__pycache__/
+.next/
 .env
 .env.*
 !.env.example
+*.tsbuildinfo
+playwright-report/
+test-results/
+shots/
+.next-test/
+.neon

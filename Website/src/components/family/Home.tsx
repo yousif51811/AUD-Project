@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { ArrowRight, Check, Plus, Heart, Coffee, BookOpen, MessageCircle } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
+import { useWorkspace } from '@/workspace/Workspace';
 export function Home() {
   useDocumentTitle('A place for the everyday');
   const [checked,setChecked]=useState(false);
+  const workspace=useWorkspace();
+  if(workspace.mode==='account'&&workspace.user&&workspace.identity&&workspace.family) return <Navigate to="/dashboard" replace/>;
   return <>
     <section className="home-hero">
-      <div className="home-hero-copy"><p className="home-label"><span/>For the beautifully busy business of family.</p><h1 tabIndex={-1}>All the little things.<br/>One place<br/><em>to come together.</em></h1><p>School runs. Study breaks. Checking in on grandma. FamilyMind helps you share the load and find a little time for each other.</p><div className="home-actions"><Link to="/onboarding" className="btn btn-primary btn-lg">Set up your family <ArrowRight size={18}/></Link><Link to="/demo" className="home-demo-link">Or meet our sample family <ArrowRight size={16}/></Link></div><span className="home-fineprint">Free to explore. No account. Everything stays in this browser.</span></div>
+      <div className="home-hero-copy"><p className="home-label"><span/>For the beautifully busy business of family.</p><h1 tabIndex={-1}>All the little things.<br/>One place<br/><em>to come together.</em></h1><p>School runs. Study breaks. Checking in on grandma. FamilyMind helps you share the load and find a little time for each other.</p><div className="home-actions"><Link to="/sign-up" className="btn btn-primary btn-lg">Set up your family <ArrowRight size={18}/></Link><Link to="/demo" className="home-demo-link">Or meet our sample family <ArrowRight size={16}/></Link></div><span className="home-fineprint">Explore the fictional family without an account.</span></div>
       <div className="home-noticeboard" aria-label="An example of a shared family week">
         <div className="board-tape" aria-hidden/>
         <div className="board-caption"><span>A SAMPLE FAMILY WEEK</span><span>one week at a time</span></div>
@@ -23,7 +26,7 @@ export function Home() {
       <Link to="/assessment" className="home-tool tool-peach"><span className="tool-sketch"><Coffee size={32}/></span><span className="home-tool-kicker">THE CHECK-IN</span><h3>How is everyone<br/>really doing?</h3><p>Eight questions to notice the pressure points and find a good place to start.</p><span className="tool-link">Take a moment <ArrowRight size={18}/></span></Link>
       <Link to="/memories" className="home-tool tool-lilac"><span className="tool-sketch"><BookOpen size={32}/></span><span className="home-tool-kicker">THE KEEPSAKES</span><h3>Keep the small,<br/>good things.</h3><p>A story, a thank-you, a little win. Make a place for the things worth remembering.</p><span className="tool-link">Open the keepsakes <ArrowRight size={18}/></span></Link>
     </div></section>
-    <section className="home-about"><div><span className="handwritten">a helping hand, not another thing to manage</span><h2>Your family knows best.<br/>We just help you<br/><em>join the dots.</em></h2></div><div><MessageCircle size={30}/><p>FamilyMind connects your check-in answers with practical ideas for the week. You can see why each idea was suggested, change it, or leave it.</p><p>It's a student-built prototype using simple, explainable rules. No hidden monitoring, no live AI model, and no promises to fix family life.</p><Link to="/trust" className="home-demo-link">Get to know the project <ArrowRight size={16}/></Link></div></section>
-    <section className="home-end"><Plus size={30}/><h2>Start with one small thing.</h2><p>A shared meal. A lighter afternoon. A phone call you've been meaning to make.</p><Link className="btn btn-primary btn-lg" to="/onboarding">Start your family plan <ArrowRight size={18}/></Link></section>
+    <section className="home-about"><div><span className="handwritten">a helping hand, not another thing to manage</span><h2>Your family knows best.<br/>We just help you<br/><em>join the dots.</em></h2></div><div><MessageCircle size={30}/><p>FamilyMind connects your check-in answers with practical ideas for the week. You can see why each idea was suggested, change it, or leave it.</p><p>It’s a student-built prototype combining explainable planning with optional AI connected from your browser. No hidden monitoring, and every suggested change remains your decision.</p><Link to="/trust" className="home-demo-link">Get to know the project <ArrowRight size={16}/></Link></div></section>
+    <section className="home-end"><Plus size={30}/><h2>Start with one small thing.</h2><p>A shared meal. A lighter afternoon. A phone call you've been meaning to make.</p><Link className="btn btn-primary btn-lg" to="/sign-up">Start your family plan <ArrowRight size={18}/></Link></section>
   </>;
 }

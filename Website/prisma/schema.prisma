@@ -1,0 +1,126 @@
+generator client {
+ provider = "prisma-client-js"
+}
+datasource db {
+ provider = "postgresql"
+ url = env("DATABASE_URL")
+ directUrl = env("DATABASE_URL_UNPOOLED")
+}
+model User {
+id String @id @default(cuid())
+name String
+email String @unique
+ageGroup String @default("adult")
+relationship String @default("")
+emailVerified Boolean @default(false)
+image String?
+locale String @default("en")
+timezone String @default("Asia/Dubai")
+fontScale String @default("normal")
+reducedMotion Boolean @default(false)
+onboarded Boolean @default(false)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+memberships FamilyMembership[]
+sessions Session[]
+accounts Account[]
+}
+model Session {
+id String @id @default(cuid())
+token String @unique
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+expiresAt DateTime
+ipAddress String?
+userAgent String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+@@index([userId])
+}
+model Account {
+id String @id @default(cuid())
+accountId String
+providerId String
+userId String
+user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+accessToken String?
+refreshToken String?
+idToken String?
+accessTokenExpiresAt DateTime?
+refreshTokenExpiresAt DateTime?
+scope String?
+password String?
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+@@unique([providerId, accountId])
+@@index([userId])
+}
+model VerificationToken {
+id String @id @default(cuid())
+identifier String
+value String
+expiresAt DateTime
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+@@index([identifier])
+}
+model rateLimit {
+id String @id @default(cuid())
+key String @unique
+count Int @default(0)
+lastRequest Float @default(0)
+expiresAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+@@index([expiresAt])
+}
+model Family {
+ id String @id @default(cuid())
+ ownerId String
+ timezone String @default("Asia/Dubai")
+ createdAt DateTime @default(now())
+ memberships FamilyMembership[]
+ invitations FamilyInvitation[]
+ records EncryptedRecord[]
+}
+model FamilyMembership {
+ id String @id @default(cuid())
+ familyId String
+ family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+ userId String
+ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+ role String @default("MEMBER")
+ status String @default("PENDING")
+ joinedAt DateTime @default(now())
+ @@unique([familyId,userId])
+}
+model FamilyInvitation {
+ id String @id @default(cuid())
+ familyId String
+ family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+ tokenHash String @unique
+ email String
+ ageGroup String
+ expiresAt DateTime
+ acceptedAt DateTime?
+ revokedAt DateTime?
+}
+model EncryptionIdentity {
+ userId String @id
+ publicKey String
+ signingKey String
+ vault Json
+ updatedAt DateTime @updatedAt
+}
+model EncryptedRecord {
+ id String @id
+ familyId String
+ family Family @relation(fields: [familyId], references: [id], onDelete: Cascade)
+ authorId String
+ kind String
+ version Int
+ recipients String[]
+ envelope Json
+ deleted Boolean @default(false)
+ updatedAt DateTime @updatedAt
+ @@index([familyId,updatedAt])
+}

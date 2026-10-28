@@ -7,6 +7,7 @@ import type {
   ScheduleChange,
   ScheduleEvent,
 } from '@/types';
+import {dateForDay} from './dates';
 import { DAY_NAMES, fromMin, overlaps, toMin } from './time';
 import { carrierAndHelper, eventMinutes, responsibilityLoad, student } from './people';
 
@@ -24,7 +25,7 @@ export function detectConflicts(events: ScheduleEvent[]): Conflict[] {
     for (let j = i + 1; j < events.length; j++) {
       const a = events[i];
       const b = events[j];
-      if (a.day !== b.day || !overlaps(a.start, a.end, b.start, b.end)) continue;
+      if ((a.date && b.date ? a.date !== b.date : a.day !== b.day) || !overlaps(a.start, a.end, b.start, b.end)) continue;
       const shared = a.assigneeIds.filter((id) => b.assigneeIds.includes(id));
       if (shared.length) out.push({ a, b, memberIds: shared });
     }
@@ -83,7 +84,7 @@ export function findSlot(
 
 function applyChange(events: ScheduleEvent[], c: ScheduleChange): ScheduleEvent[] {
   if (c.op === 'add') return [...events, c.event];
-  return events.map((e) => (e.id === c.eventId ? { ...e, ...c.patch } : e));
+  return events.map((e) => (e.id === c.eventId ? { ...e, ...c.patch, ...(e.date&&c.patch.day!==undefined?{date:dateForDay(c.patch.day,new Date(e.date+'T12:00:00'))}:{}) } : e));
 }
 
 export function applyChanges(events: ScheduleEvent[], changes: ScheduleChange[]): ScheduleEvent[] {

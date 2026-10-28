@@ -50,25 +50,6 @@ export function validateCoachResponse(x: unknown, scenario: CoachScenarioId): Co
   };
 }
 
-function remoteProvider(endpoint: string): CoachProvider {
-  return {
-    id: 'remote',
-    async generate(input, scenario, ctx, signal) {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        // Only the question and scenario are sent. No names, scores or private data leave the device.
-        body: JSON.stringify({ scenario, question: sanitizeText(input, 300) }),
-        signal,
-      });
-      if (!res.ok) throw new Error('provider unavailable');
-      const valid = validateCoachResponse(await res.json(), scenario);
-      if (!valid) throw new Error('invalid provider output');
-      const fallback = buildCoachResponse(scenario, ctx);
-      return { ...valid, plan: fallback.plan };
-    },
-  };
-}
 
 export function safetyResponse(): CoachResponse {
   return {
@@ -100,8 +81,7 @@ export async function getCoachResponse(
   const safety = checkSafety(text);
   if (safety.level === 'crisis') return { response: safetyResponse(), fellBack: false };
   const scenario = classifyScenario(text);
-  const endpoint = (import.meta as unknown as { env?: Record<string, string | undefined> }).env?.VITE_FAMILYMIND_AI_ENDPOINT;
-  const provider = opts.provider ?? (endpoint ? remoteProvider(endpoint) : deterministicProvider);
+  const provider = opts.provider ?? deterministicProvider;
   let fellBack = false;
   let response: CoachResponse;
   const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
