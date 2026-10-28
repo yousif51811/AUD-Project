@@ -2,6 +2,29 @@
 
 A fictional-data family wellbeing prototype combining the original warm planner interface with accounts, encrypted synchronization and AI requests sent directly from browsers to user-selected providers. React, TypeScript, Next.js, npm, Prisma and PostgreSQL.
 
+## Optional Google sign-in on Render
+
+The current PostgreSQL schema already supports Google accounts; no database migration is needed. Email/password continues working when Google is not configured.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), configure the OAuth consent screen and create an OAuth client of type **Web application**. Use your own project/contact details and, if Google restricts a testing app, allow your demo accounts in its audience settings.
+2. Register this **Authorized redirect URI**, replacing the placeholder with your actual Render hostname: `https://YOUR-RENDER-HOST/api/auth/callback/google`. It must match `APP_URL` exactly, including scheme and hostname. For local testing, register the equivalent URI for your chosen localhost address and port. Open the app at that exact address; `localhost` and `127.0.0.1` do not share OAuth state cookies.
+3. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in the Render Web Service's environment, alongside the existing `APP_URL`, `AUTH_SECRET` and database URLs. Keep these server-only; never use `NEXT_PUBLIC_` names. Restart/redeploy the service after changing them. Do not replace the existing auth secret.
+4. The sign-in and create-account tabs offer **Continue with Google**. New accounts use the selected age group and Google's profile name/email. Children/teens need a matching adult invitation; its email, age group and validity are checked again after Google's callback. Existing email users first sign in normally, then choose **Link Google to this account** on Account using the same Google email. Accounts are not silently merged.
+
+Google authentication uses only `openid`, `email` and `profile`, with provider tokens encrypted using `AUTH_SECRET`. Call-time requests cannot add Google API scopes. Google sign-in grants no family membership or vault decryption; users still create/unlock their separate vault and obtain invitation approval. It does not connect Gemini or another AI provider. The public `/api/auth-options` endpoint exposes only whether Google is configured, never credentials. OAuth failures display fixed guidance, excluding provider descriptions.
+
+Reference: [Better Auth's Google setup](https://better-auth.com/docs/authentication/google), [Google's redirect URI rules](https://developers.google.com/identity/protocols/oauth2/web-server#redirect-uri-validation).
+
+## Languages and About us
+
+Language starts in **Device** mode: the first supported English/Arabic browser preference wins, including regional variants, with English as fallback. Settings offers Device / English / العربية. The header shortcut creates an explicit choice, preserved across reloads and tabs. Existing English/Arabic preferences remain explicit choices. Device mode follows `languagechange`; blocked storage uses memory. Language changes preserve drafts and never translate member-authored content.
+
+The header language button switches between English and Arabic, alongside the theme control. The family menu and sign-in modal also offer the switch. Arabic uses right-to-left layout; the browser remembers the choice separately as `familymind:language:v1`. Switching preserves mounted forms, assistant drafts, theme and family data. Blocked storage keeps the preference in memory for this visit.
+
+Interface translations live in [src/i18n/ar.json](src/i18n/ar.json); English interface strings are the lookup keys. Unknown copy falls back to English. Names, saved tasks, notes, conversations and other record content remain as entered; no translation service is called. The assistant recognises Arabic assignment/availability starters and asks a connected provider to answer in the selected language. Personal providers require an explicit connection; shared Gemini uses server configuration. Both require the approved-context preview.
+
+The public [About us page](src/screens/About.tsx) is available at `/about`, from the footer and family menu. Edit its English/Arabic text, team names and supervisor in [src/data/about.ts](src/data/about.ts). Its layout uses the existing courtyard artwork and paper palette, with project context, principles and five team cards. Documentation remains in English.
+
 ## Run locally
 
 Use Node **22.12–24**. Install dependencies on this machine; do not copy `node_modules` from another operating system.
@@ -36,7 +59,7 @@ Install the Playwright browser with `npx playwright install chromium --only-shel
 
 ## Hosting on Render
 
-The current account/sync application needs a **Node Web Service**, not a Static Site. Next.js serves the pages and the existing API routes together; a separate frontend/backend deployment is unnecessary. AI provider calls still go directly from browsers. The Neon database connection, schema migration and locally running app have been verified. The application itself has not been deployed or verified on Render.
+The current account/sync application needs a **Node Web Service**, not a Static Site. Next.js serves the pages and the existing API routes together; a separate frontend/backend deployment is unnecessary. Shared Gemini calls pass through the same Next.js service to Google. Personal-provider calls still go directly from browsers. The Neon database connection, schema migration and locally running app have been verified. The public site was observed loading an earlier version on 28 October 2026. Deployment of these changes and hosted account/live-AI flows remain unverified.
 
 The selected database is Neon PostgreSQL, with Render remaining the application host. Neon has a Free plan with quotas. In Neon’s **Connect** dialog, copy the **pooled** URL into `DATABASE_URL` and the **direct/unpooled** URL into `DATABASE_URL_UNPOOLED`, retaining their SSL parameters. The existing Prisma 6 client uses pooled connections for application traffic and its `directUrl` for migrations; no ORM upgrade or serverless-driver replacement is needed for this Node web service. Neon’s other managed products are not required. [Neon connection guide](https://neon.com/docs/get-started/connect-neon), [current free-plan quotas](https://neon.com/pricing).
 
@@ -60,7 +83,7 @@ Create a Render **Web Service** connected to the repository and configure:
 |---|---|
 | Runtime | Node |
 | Root Directory | `Website` |
-| Build Command | `npm ci && npm run db:deploy && npm run build` |
+| Build Command | `npm ci --include=dev && npm run db:deploy && npm run build` |
 | Start Command | `npx next start --hostname 0.0.0.0 --port "$PORT"` |
 | Instance | Free, for the synthetic prototype |
 
@@ -73,8 +96,11 @@ Set these in the Render service’s environment before deploying:
 | `AUTH_SECRET` | At least 32 random characters; generate locally with `openssl rand -hex 32` |
 | `APP_URL` | The full HTTPS public origin, e.g. `https://your-service.onrender.com` |
 | `NODE_VERSION` | `24.22.1` (tested Node 24 runtime) |
+| `NODE_ENV` | `production` (exactly, without quotes or spaces) |
 
-Keep the secret stable across deploys and set `APP_URL` to the actual origin used to sign in. Do not prefix secrets with `NEXT_PUBLIC_`, commit them, or paste them into chat. No AI keys belong in the Render environment. The build command applies committed database migrations before building; use only the intended hosted prototype database. Do not run the embedded `db:local` helper on Render. The normal `npm start` intentionally binds to localhost for local use; the explicit hosted start command above overrides that by calling Next directly.
+For hosted builds and `next start`, use `NODE_ENV=production`. Do not copy a local development value into Render. Next.js warns about the wrong environment and may fail to prerender its internal `/_global-error` page with `Cannot read properties of null (reading 'useContext')`; fix the environment before investigating secondary key warnings. After changing it, use Render’s **Clear build cache & deploy** action. `--include=dev` keeps Prisma’s CLI and TypeScript available during the build even with production environment settings. See [Next.js environment guidance](https://nextjs.org/docs/messages/non-standard-node-env).
+
+Keep the secret stable across deploys and set `APP_URL` to the actual origin used to sign in. Do not prefix secrets with `NEXT_PUBLIC_`, commit them, or paste them into chat. Only the shared `GEMINI_API_KEY` belongs in the Render environment; personal-provider keys remain on each browser. The build command applies committed database migrations before building; use only the intended hosted prototype database. Do not run the embedded `db:local` helper on Render. The normal `npm start` intentionally binds to localhost for local use; the explicit hosted start command above overrides that by calling Next directly.
 
 After deployment, check sample access and signup → vault creation → family creation, then invite a second disposable account and verify shared encrypted changes. This creates a new database; local accounts/data do not move automatically. Keep demonstrations fictional. See [Render’s Next.js guide](https://render.com/docs/deploy-nextjs-app) and [port requirements](https://render.com/docs/web-services#port-binding).
 
@@ -94,17 +120,29 @@ Render Free services sleep after 15 minutes without traffic and can take about a
 
 Choose **Try the sample family**, then a fictional Al Noor family member. Each browser session has its own sample changes; there are no shared public demo credentials. Switch perspectives from the sample chooser and reset when needed. This is role simulation, not real authentication. The presenter walkthrough remains under `/tour`.
 
+Sign-in and account creation open in an illustrated modal over the current page. Escape or the close button returns to that page and restores keyboard focus without discarding an unsent assistant draft. Direct `/sign-in` and `/sign-up` links open the same modal over the public home. The modal has keyboard-operable mode tabs, password visibility, a scrollable phone layout and an always-reachable close control. Invitation links reuse the form; `/account` continues to handle vaults, membership selection and sessions.
+
 Real account flow: register → create/unlock vault → create or accept an invitation → owner approves encrypted access → open the family. Children and teenagers require a valid invitation matching their email and age group. Signup profile labels never grant administrator permissions. Email delivery and Google OAuth are not prerequisites; account-password-reset email delivery is not implemented in this merge.
 
 ## Interface and features
 
 Home, Our week and Calendar are the main navigation. Home combines the family assistant with today's responsibilities, calendar and care routines. Old `/coach` links open the assistant on Home; an unlocked signed-in member visiting `/` goes to the family homepage. Family & more contains responsibilities and recurring rotations, personal check-ins, voluntary availability, reminders/requests, study/rest support, care routines, text keepsakes, household preferences and privacy settings.
 
-Light, Dark and System keep the existing `familymind:appearance:v1` preference. The courtyard illustration, pointer-responsive botanical background, soft entrances and interaction animations give the space a more expressive identity. Pause scenery saves a personal reduced-motion preference; device Reduce motion always takes precedence. Larger text and contrast remain supported. The background never intercepts clicks or starts AI. No new animation framework, cinematic intro or artificial typing delay is involved.
+Light, Dark and System keep the existing `familymind:appearance:v1` preference. The courtyard illustration, pointer-responsive botanical background, soft entrances and interaction animations give the space a more expressive identity. The latest presentation pass adds compact navigation, clearer typography, illustrated assistant shortcuts and more deliberate spacing/surfaces. Cards stay still on hover; colour, borders and small icon changes provide interaction feedback. Sign-in remains visible in the phone header. Pause scenery saves a personal reduced-motion preference; device Reduce motion always takes precedence. Larger text and contrast remain supported. The background never intercepts clicks or starts AI. No new animation framework, cinematic intro or artificial typing delay is involved.
 
 Changes to other members' commitments become acceptance requests rather than automatic writes. Recurring responsibilities require agreement on their rotation. Upcoming tasks are prepared explicitly while the app is open. In-app reminders respect quiet hours; closed-browser push, scheduled email and unattended background AI are outside this prototype.
 
-## AI: connect directly from your browser
+## AI: shared Gemini by default, personal providers optional
+
+**Server-side · Gemini** is selected initially for accounts and the fictional sample. Add `GEMINI_API_KEY` privately in the Render Web Service environment (or your ignored local `.env`) and optionally `GEMINI_MODEL`; the default is `gemini-3.5-flash-lite`. Never use a `NEXT_PUBLIC_` variable or replace the auth secret. Restart/redeploy after changing server configuration. No database migration, SDK or paid plan change is required. Removing the shared key disables the option without switching providers.
+
+`GET /api/ai/config` returns availability/model only and issues a signed HttpOnly anonymous demo session; it never tests inference. `POST /api/ai/answer` accepts only a bounded question, English/Arabic language, approved facts and member identifiers. It builds its own instructions and validates answers. Shared requests send **readable approved context through FamilyMind’s backend to Google**. The backend does not log or persist readable requests/answers; private conversation history can still sync as encrypted records. The preview explicitly identifies both recipients. Stored household encryption and locally held decryption keys are unchanged.
+
+Shared allowance defaults: 5 requests/minute per signed-in account or signed anonymous demo session, 10/minute globally and 100/day globally (UTC application day). `AI_CALLER_RPM`, `AI_GLOBAL_RPM`, `AI_GLOBAL_RPD` may lower these caps; higher values cannot raise the defaults. Counters use the existing PostgreSQL RateLimit table and are atomic across concurrent requests. Anonymous sessions are not strong identity—clearing cookies can obtain another session—but global caps remain enforced across sessions and restarts. Rejected/failed generation attempts may consume an allowance. Upstream Gemini project limits also apply; these caps cannot guarantee provider availability or prevent charges on an already billed Google project. Keep the existing free-only setup and use fictional data. No retries or provider fallback happen automatically.
+
+Missing configuration, invalid responses, quota and timeout failures retain the question and leave the planner usable. Requests cancel after 45 seconds. Cancellation aborts local/server work when signalled but cannot retract an already submitted Google request or guarantee a quota refund. AI actions still require confirmation and existing member acceptance rules.
+
+### Personal connections
 
 Choose **Connect AI** on Home, or Family & more → People & privacy → Connect your assistant. Select **Groq**, **Gemini** or **OpenRouter**, open the official key page, paste your own key, then choose **Test & connect**. The test uses a tiny synthetic message and verifies that the selected model returns the JSON format the assistant needs. It contains no household records and may count toward the provider's allowance.
 
@@ -120,9 +158,9 @@ No model weights, WebGPU, local AI runtime or paid hosting are required. WebLLM 
 
 Connections are personal to this tab/browser. Keys stay in memory for the visit by default. Signed-in members can explicitly choose **Remember on this browser**, which stores a sealed, encrypted connection locally using the account's vault identity. It becomes usable again only after vault unlock and family selection. It is never uploaded, included in family backups or shared with other members. Demo keys are always memory-only and clear on reload, demo reset, perspective change or account/family changes. Disconnect removes the current tab's connection and its saved browser copy; revoke the key through its provider to invalidate copies elsewhere.
 
-Keys go only in authentication headers to fixed HTTPS provider endpoints, never in URLs or application API requests. Neither testing nor inference uses our backend. Requests have bounded output, cancellation and a timeout. Authentication, model access, quota/credits, browser/network and malformed-answer errors have distinct messages. There is no automatic retry, backend proxy, provider switch or paid-model fallback. An unavailable provider stays unavailable until the user changes the connection.
+Personal-provider keys go only in authentication headers to fixed HTTPS provider endpoints, never in URLs or application API requests. Neither personal-provider testing nor personal-provider inference uses our backend. Requests have bounded output, cancellation and a timeout. Authentication, model access, quota/credits, browser/network and malformed-answer errors have distinct messages. There is no automatic retry, backend proxy, provider switch or paid-model fallback. An unavailable provider stays unavailable until the user changes the connection.
 
-Every assistant request previews its question and approved context before sending. Ordinary family sharing does not permit provider processing; authors opt records in separately. Prior chat messages are excluded from provider requests. Built-in assignment/availability queries stay available without any connection and are labelled as recorded facts. Generated changes remain validated proposals requiring confirmation. Private chat history can still sync as encrypted family records; this does not proxy an inference request or expose readable prompts to the server.
+Every assistant request previews its question and approved context before sending. Ordinary family sharing does not permit provider processing; authors opt records in separately. Prior chat messages are excluded from provider requests. Built-in assignment/availability queries stay available without any connection and are labelled as recorded facts. Generated changes remain validated proposals requiring confirmation. Private chat history can still sync as encrypted family records; encrypted chat synchronization is separate from approved inference requests.
 
 Earlier encrypted family-wide `cloud` records are no longer used. Owners can explicitly remove them in the old-settings disclosure. They are not silently migrated or deleted. Provider keys copied into the new connection form are never written back to these records.
 

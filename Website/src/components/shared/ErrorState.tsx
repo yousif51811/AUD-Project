@@ -1,16 +1,18 @@
+import { t, useLanguage } from '@/i18n';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { AlertTriangle, Home, RefreshCw } from 'lucide-react';
 
 /** Shown instead of a blank screen. Never exposes stack traces. */
 export function ErrorState({ title = 'Something did not load', message = 'Your information is safe on this device. You can try again or go back to the overview.', onRetry }: { title?: string; message?: string; onRetry?: () => void }) {
+  useLanguage();
   return (
     <div className="state-box" role="alert">
       <span className="state-icon danger"><AlertTriangle size={26} aria-hidden /></span>
-      <h2 style={{ fontSize: 'var(--fs-xl)' }}>{title}</h2>
-      <p className="muted">{message}</p>
+      <h2 style={{ fontSize: 'var(--fs-xl)' }}>{typeof title === 'string' ? t(title) : title}</h2>
+      <p className="muted">{t(message)}</p>
       <div className="cluster" style={{ justifyContent: 'center' }}>
-        {onRetry && <button className="btn btn-royal" type="button" onClick={onRetry}><RefreshCw size={18} aria-hidden /> Try again</button>}
-        <a className="btn btn-secondary" href="/"><Home size={18} aria-hidden /> Back to overview</a>
+        {onRetry && <button className="btn btn-royal" type="button" onClick={onRetry}><RefreshCw size={18} aria-hidden />{t(" Try again")}</button>}
+        <a className="btn btn-secondary" href="/"><Home size={18} aria-hidden />{t(" Back to overview")}</a>
       </div>
     </div>
   );

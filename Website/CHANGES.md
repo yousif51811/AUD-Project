@@ -1,3 +1,52 @@
+# Final-demo reliability and shared Gemini
+
+- Added default server-side Gemini for accounts and the fictional sample, with a server-only key, explicit request preview, sanitized errors, cancellation and atomic per-caller/global request caps. Personal Groq/Gemini/OpenRouter keys retain their browser-only storage. Restoring remembered keys does not override the shared default.
+- Centralized sample reset for sample selection and presenter entry/restart: fresh Omar perspective, original planner, cleared sample records and conversations, with an in-memory path when session storage is blocked. Account records and language/theme preferences are preserved.
+- Assistant questions remain available after missing configuration, dismissed previews, failed requests and cancellation. Successful answers clear the matching question without erasing a newer draft.
+- Modal keyboard handlers/focus now initialize before paint to address immediate Escape during phone-menu authentication transitions.
+- Device language is the default, with explicit Device/English/Arabic choices in Settings. Added translations for the new controls/privacy boundaries and previously English-only walkthrough interface text.
+- Updated setup, privacy and contributor documentation. This supersedes earlier direct-only AI architecture notes below. No schema migration, paid service change or deployment is included.
+
+---
+
+# Optional Google sign-in / account creation
+
+- Added an optional Better Auth Google provider using the existing PostgreSQL `User`/`Account` tables, with no schema migration or new package.
+- Added bilingual Google controls to the sign-in/create-account modal and invitation forms. Missing credentials disable only Google, with clear guidance; email remains available. A public non-cached feature flag exposes no credentials.
+- New Google accounts require explicit signup and an age group. Child/teen invitations are validated before redirect and again against Google's verified email; enrollment is stored only in server-controlled OAuth state. Raw invitation secrets and arbitrary scope/parameter overrides are excluded from saved state.
+- Existing email users explicitly link the same Google email from Account. Automatic account merging and direct client ID-token login are disabled. OAuth tokens use server-side encryption, with basic identity scopes only. Vault creation/unlocking and encrypted membership approval remain separate.
+- Added secret-safe OAuth error guidance, local signed-provider integration coverage and browser checks. Render/Google setup is documented in README and `.env.example`; no real OAuth credentials were added or deployment performed.
+
+---
+
+# English / Arabic and About us
+
+- Added a header language button alongside appearance, with additional access inside the family menu and authentication modal. The local preference survives reloads and synchronises between tabs; blocked storage falls back to memory. Language changes preserve mounted drafts, form fields, appearance and family state.
+- Added Arabic interface copy across the public home, planner, account/vault, assessment, care/study/keepsakes controls, reminders, privacy and provider setup. The root language/direction is applied before paint; RTL spacing, directional arrows, mixed-script fields and responsive header controls are adapted without mirroring the artwork.
+- Member-authored content is not translated or sent to any translation service. Arabic built-in assistant queries use recorded facts; connected AI receives an explicit response-language instruction while preserving record identifiers and the existing context-approval boundary.
+- Added public `/about` with an illustrated introduction, project principles, five verified team members, supervisor credit and honest prototype context. Editable English/Arabic content is in `src/data/about.ts`. Footer/menu links distinguish About us from privacy.
+- Updated contributor guidance to reflect the approved bilingual application, while retaining English documentation. No dependencies, schema changes or deployment were introduced.
+
+---
+
+# Illustrated sign-in and presentation refinement
+
+Sign-in and account creation now open as route-aware dialogs above the current page. The page stays mounted and becomes inert; closing restores focus and preserves its unsent assistant draft. Direct auth links use the public home as their backdrop. Authentication still goes to the existing same-origin account endpoints, then continues to the separate vault/account flow. Invitation pages reuse the form; household permissions and encryption are unchanged.
+
+The dialog adds custom courtyard illustration, account mode tabs with keyboard navigation, password visibility, cancellable pending requests, reduced-motion support and a scrollable phone layout with a sticky close/header area. The shared modal includes focus restoration for inert backgrounds and allows keyboard access to help disclosures.
+
+The warm garden identity remains, with more deliberate type/spacing, compact navigation, illustrated assistant question shortcuts and calmer rounded surfaces. Whole cards no longer rise on hover; feedback uses colour, borders and small icons. The phone header exposes sign-in directly. No new package, AI behavior, data migration or backend route was introduced. Existing concurrent favicon changes were preserved.
+
+Source-only backup before editing: `/tmp/familymind-before-auth-design-20261028.tar.gz`. See [verification](VERIFICATION.md) for checks and limits.
+
+---
+
+# Render build environment follow-up
+
+The supplied Render log shows successful Neon migration checks followed by a non-standard `NODE_ENV` warning, internal React key warnings and a `/_global-error` prerender crash. Forcing `NODE_ENV=development` reproduced those symptoms locally. Hosted setup now explicitly specifies `NODE_ENV=production` and includes development dependencies during installation so the Prisma CLI/TypeScript remain available. No application rendering code or dependency versions were changed for this configuration issue. See [verification](VERIFICATION.md) for the production build result.
+
+---
+
 # Neon PostgreSQL setup
 
 Linked the supplied existing Neon project’s production branch with PostgreSQL only. Added `neon.ts` and development-only config support; `.neon` context and environment credentials are ignored. Existing account secret and app origin were preserved, with a private temporary configuration backup before initialization. The existing Prisma 6/PostgreSQL architecture remains: pooled `DATABASE_URL` for runtime, direct `DATABASE_URL_UNPOOLED` for migrations. Local setup and isolated test launchers set both variables, preventing a hosted migration URL from leaking into local fixture runs.

@@ -1,3 +1,4 @@
+import { t as translateText, useLanguage } from '@/i18n';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Tone = 'ok' | 'warn' | 'error';
@@ -7,6 +8,7 @@ interface ToastApi { toast: (message: string, tone?: Tone, action?: ToastItem['a
 const Ctx = createContext<ToastApi>({ toast: () => undefined });
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  useLanguage();
   const [items, setItems] = useState<ToastItem[]>([]);
   const timers = useRef<Map<number, number>>(new Map());
   const idRef = useRef(0);
@@ -35,8 +37,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-region" role="status" aria-live="polite" aria-atomic="false">
         {items.map((t) => (
           <div key={t.id} className={`toast toast-${t.tone}`}>
-            <span>{t.message}</span>
-            {t.action && <button type="button" onClick={() => { t.action!.run(); dismiss(t.id); }}>{t.action.label}</button>}
+            <span>{translateText(t.message)}</span>
+            {t.action && <button type="button" onClick={() => { t.action!.run(); dismiss(t.id); }}>{translateText(t.action.label)}</button>}
           </div>
         ))}
       </div>

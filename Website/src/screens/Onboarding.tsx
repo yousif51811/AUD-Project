@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Check, Plus, Sparkles, Trash2, X, AlertCircle } from 'lucide-react';
@@ -33,6 +34,7 @@ function initial(p: HouseholdProfile | null): Draft {
 }
 
 export default function Onboarding() {
+  useLanguage();
   useDocumentTitle('Household setup');
   const { profile, restoreDemo, completeOnboarding } = useApp();
   const { toast } = useToast();
@@ -73,19 +75,19 @@ export default function Onboarding() {
 
   return (
     <div className="container container-narrow section-tight stack stack-lg">
-      <PageHeader eyebrow={`Household setup · Step ${step + 1} of 5`} title="Make yourself at home." lede="Five short steps. You stay in control of what is shared, and everything stays on this device." actions={<button type="button" className="btn btn-secondary" onClick={useDemo}><Sparkles size={18} aria-hidden /> Use Al Noor Demo Family</button>} />
-      <ol className="stepper" aria-label="Setup progress">
+      <PageHeader eyebrow={`Household setup · Step ${step + 1} of 5`} title={t("Make yourself at home.")} lede={t("Five short steps. You stay in control of what is shared, and everything stays on this device.")} actions={<button type="button" className="btn btn-secondary" onClick={useDemo}><Sparkles size={18} aria-hidden />{t(" Use Al Noor Demo Family")}</button>} />
+      <ol className="stepper" aria-label={t("Setup progress")}>
         {STEPS.map((s, i) => (
           <li key={s} className={i === step ? 'current' : i < step ? 'done' : ''} aria-current={i === step ? 'step' : undefined}>
             <span className="stepper-dot">{i < step ? <Check size={14} aria-hidden /> : i + 1}</span><span className="stepper-label">{s}</span>
-            {i < step && <span className="sr-only"> (completed)</span>}
+            {i < step && <span className="sr-only">{t(" (completed)")}</span>}
           </li>
         ))}
       </ol>
 
       {errors.length > 0 && (
         <div className="error-summary" role="alert" tabIndex={-1} ref={summaryRef}>
-          <strong><AlertCircle size={18} aria-hidden style={{ display: 'inline', verticalAlign: '-3px' }} /> Please fix {errors.length === 1 ? 'this' : 'these'} before continuing</strong>
+          <strong><AlertCircle size={18} aria-hidden style={{ display: 'inline', verticalAlign: '-3px' }} />{t(" Please fix ")}{errors.length === 1 ? t("this") : t("these")}{t(" before continuing")}</strong>
           <ul>{errors.map((e) => <li key={e}>{e}</li>)}</ul>
         </div>
       )}
@@ -97,13 +99,13 @@ export default function Onboarding() {
         {step === 3 && <StepPrivacy headRef={headRef} d={d} setD={setD} />}
         {step === 4 && <StepPrefs headRef={headRef} d={d} setD={setD} />}
         <div className="between row wrap-row">
-          <button type="button" className="btn btn-ghost" onClick={back} disabled={step === 0}><ArrowLeft size={18} aria-hidden /> Back</button>
+          <button type="button" className="btn btn-ghost" onClick={back} disabled={step === 0}><ArrowLeft size={18} aria-hidden />{t(" Back")}</button>
           {step < 4
-            ? <button type="button" className="btn btn-royal" onClick={next}>{step === 0 ? 'I understand, set up my household' : 'Continue'} <ArrowRight size={18} aria-hidden /></button>
-            : <button type="button" className="btn btn-primary btn-lg" onClick={finish}>Create my household <Check size={18} aria-hidden /></button>}
+            ? <button type="button" className="btn btn-royal" onClick={next}>{step === 0 ? t("I understand, set up my household") : t("Continue")} <ArrowRight size={18} aria-hidden /></button>
+            : <button type="button" className="btn btn-primary btn-lg" onClick={finish}>{t("Create my household ")}<Check size={18} aria-hidden /></button>}
         </div>
       </section>
-      <p className="xs muted">Prefer to explore first? <Link to="/demo">Launch the judge demo</Link> or <button type="button" className="linklike" onClick={useDemo}>load the Al Noor demo family</button>.</p>
+      <p className="xs muted">{t("Prefer to explore first? ")}<Link to="/demo">{t("Launch the judge demo")}</Link>{t(" or ")}<button type="button" className="linklike" onClick={useDemo}>{t("load the Al Noor demo family")}</button>.</p>
     </div>
   );
 }
@@ -111,39 +113,41 @@ export default function Onboarding() {
 type SP = { headRef: React.RefObject<HTMLHeadingElement | null>; d: Draft; setD: React.Dispatch<React.SetStateAction<Draft>> };
 
 function StepWelcome({ headRef, isDemo }: { headRef: SP['headRef']; isDemo: boolean }) {
+  useLanguage();
   return (
     <>
       <div className="stack stack-sm">
-        <h2 id="step-title" tabIndex={-1} ref={headRef}>Welcome. Here is what FamilyMind AI does, and does not do.</h2>
-        <p className="muted">AI should not replace family conversations. It should help families start better ones.</p>
+        <h2 id="step-title" tabIndex={-1} ref={headRef}>{t("Welcome. Here is what FamilyMind AI does, and does not do.")}</h2>
+        <p className="muted">{t("AI should not replace family conversations. It should help families start better ones.")}</p>
       </div>
       <div className="grid grid-2">
         <div className="card card-tint stack stack-sm">
-          <h3>FamilyMind AI does</h3>
+          <h3>{t("FamilyMind AI does")}</h3>
           <ul className="tick-list">
-            <li>Connect only the signals your family chooses to share</li>
-            <li>Explain every suggestion in plain language</li>
-            <li>Turn suggestions into small, editable family actions</li>
-            <li>Keep the family in control of every change</li>
+            <li>{t("Connect only the signals your family chooses to share")}</li>
+            <li>{t("Explain every suggestion in plain language")}</li>
+            <li>{t("Turn suggestions into small, editable family actions")}</li>
+            <li>{t("Keep the family in control of every change")}</li>
           </ul>
         </div>
         <div className="card card-tint stack stack-sm">
-          <h3>FamilyMind AI does not</h3>
+          <h3>{t("FamilyMind AI does not")}</h3>
           <ul className="cross-list">
-            <li>Diagnose medical or mental-health conditions</li>
-            <li>Monitor emergencies or replace professionals</li>
-            <li>Secretly read private entries or messages</li>
-            <li>Predict or prevent every family crisis</li>
+            <li>{t("Diagnose medical or mental-health conditions")}</li>
+            <li>{t("Monitor emergencies or replace professionals")}</li>
+            <li>{t("Secretly read private entries or messages")}</li>
+            <li>{t("Predict or prevent every family crisis")}</li>
           </ul>
         </div>
       </div>
-      <SafetyNotice title="Not a medical tool.">The family remains in control. The sample stays in this browser session. Signed-in family records are encrypted before synchronization.</SafetyNotice>
-      {isDemo && <p className="notice"><span>You are currently viewing the fictional Al Noor demo. Creating your own household replaces demo data on this device.</span></p>}
+      <SafetyNotice title={t("Not a medical tool.")}>{t("The family remains in control. The sample stays in this browser session. Signed-in family records are encrypted before synchronization.")}</SafetyNotice>
+      {isDemo && <p className="notice"><span>{t("You are currently viewing the fictional Al Noor demo. Creating your own household replaces demo data on this device.")}</span></p>}
     </>
   );
 }
 
 function StepMembers({ headRef, d, setD }: SP) {
+  useLanguage();
   const [name, setName] = useState('');
   const [roleIdx, setRoleIdx] = useState(0);
   const [age, setAge] = useState('');
@@ -169,70 +173,71 @@ function StepMembers({ headRef, d, setD }: SP) {
   return (
     <>
       <div className="stack stack-sm">
-        <h2 id="step-title" tabIndex={-1} ref={headRef}>Who is in your household?</h2>
-        <p className="muted">Use first names or nicknames. Add everyone who shares the household plan, across generations.</p>
+        <h2 id="step-title" tabIndex={-1} ref={headRef}>{t("Who is in your household?")}</h2>
+        <p className="muted">{t("Use first names or nicknames. Add everyone who shares the household plan, across generations.")}</p>
       </div>
       <div className="field">
-        <label className="label" htmlFor="hh-name">Household name</label>
+        <label className="label" htmlFor="hh-name">{t("Household name")}</label>
         <input id="hh-name" className="input" value={d.name} maxLength={60} onChange={(e) => setD({ ...d, name: e.target.value })} autoComplete="off" aria-describedby="hh-name-h" />
-        <span className="hint" id="hh-name-h">For example “The Al Noor Family”.</span>
+        <span className="hint" id="hh-name-h">{t("For example “The Al Noor Family”.")}</span>
       </div>
       {d.members.length > 0 ? (
-        <ul className="member-list" aria-label="Household members">
+        <ul className="member-list" aria-label={t("Household members")}>
           {d.members.map((m) => (
             <li key={m.id} className="member-row">
               <MemberAvatar member={m} />
-              <div className="grow"><div className="strong">{m.name}</div><div className="xs muted">{m.role}{m.age ? ` · ${m.age}` : ''}{m.accessibility.length ? ` · ${m.accessibility.join(', ')}` : ''} · {m.sharesSummaries ? 'Shares summaries' : 'Keeps summaries private'}</div></div>
-              <button type="button" className="btn btn-ghost btn-icon" aria-label={`Remove ${m.name}`} onClick={() => setD((x) => ({ ...x, members: x.members.filter((y) => y.id !== m.id) }))}><Trash2 size={18} aria-hidden /></button>
+              <div className="grow"><div className="strong">{m.name}</div><div className="xs muted">{m.role}{m.age ? ` · ${m.age}` : ''}{m.accessibility.length ? ` · ${m.accessibility.join(', ')}` : ''} · {m.sharesSummaries ? t("Shares summaries") : t("Keeps summaries private")}</div></div>
+              <button type="button" className="btn btn-ghost btn-icon" aria-label={t('Remove {name}', {name: m.name})} onClick={() => setD((x) => ({ ...x, members: x.members.filter((y) => y.id !== m.id) }))}><Trash2 size={18} aria-hidden /></button>
             </li>
           ))}
         </ul>
-      ) : <p className="notice" role="note"><span>No members yet. Add the first person below.</span></p>}
+      ) : <p className="notice" role="note"><span>{t("No members yet. Add the first person below.")}</span></p>}
       <fieldset className="card card-tint stack">
-        <legend className="label">Add a household member</legend>
+        <legend className="label">{t("Add a household member")}</legend>
         <div className="grid grid-2">
           <div className="field">
-            <label className="label" htmlFor="m-name">First name or nickname</label>
+            <label className="label" htmlFor="m-name">{t("First name or nickname")}</label>
             <input id="m-name" ref={nameRef} className="input" value={name} maxLength={40} onChange={(e) => { setName(e.target.value); setErr(''); }} aria-invalid={!!err} aria-describedby={err ? 'm-err' : undefined} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} autoComplete="off" />
           </div>
           <div className="field">
-            <label className="label" htmlFor="m-role">Role</label>
+            <label className="label" htmlFor="m-role">{t("Role")}</label>
             <select id="m-role" className="select" value={roleIdx} onChange={(e) => setRoleIdx(Number(e.target.value))}>{ROLES.map((r, i) => <option key={r[0]} value={i}>{r[0]}</option>)}</select>
           </div>
           <div className="field">
-            <label className="label" htmlFor="m-age">Age (optional)</label>
+            <label className="label" htmlFor="m-age">{t("Age (optional)")}</label>
             <input id="m-age" className="input" inputMode="numeric" value={age} onChange={(e) => setAge(e.target.value.replace(/\D/g, '').slice(0, 3))} />
           </div>
           <fieldset className="field">
-            <legend className="label">Profile colour</legend>
+            <legend className="label">{t("Profile colour")}</legend>
             <div className="cluster">
               {COLORS.map((c) => (
-                <label key={c.id} className="color-pick"><input type="radio" name="m-color" checked={color === c.id} onChange={() => setColor(c.id)} /><span className={`avatar c-${c.id}`} style={{ ['--sz' as string]: '44px' }}>{c.label[0]}</span><span className="sr-only">{c.label}</span></label>
+                <label key={c.id} className="color-pick"><input type="radio" name="m-color" checked={color === c.id} onChange={() => setColor(c.id)} /><span className={`avatar c-${c.id}`} style={{ ['--sz' as string]: '44px' }}>{c.label[0]}</span><span className="sr-only">{t(c.label)}</span></label>
               ))}
             </div>
           </fieldset>
         </div>
         <fieldset className="field">
-          <legend className="label">Accessibility preferences (optional)</legend>
+          <legend className="label">{t("Accessibility preferences (optional)")}</legend>
           <div className="choices">{A11Y.map((a) => <ChoiceCard key={a} type="checkbox" name="m-a11y" value={a} label={a} checked={a11y.includes(a)} onChange={(c) => setA11y((x) => (c ? [...x, a] : x.filter((y) => y !== a)))} />)}</div>
         </fieldset>
-        <Switch checked={shares} onChange={setShares} label="Participates in shared household summaries" description="A household preference only. Individual members control their own encrypted check-ins and summaries." />
+        <Switch checked={shares} onChange={setShares} label={t("Participates in shared household summaries")} description={t("A household preference only. Individual members control their own encrypted check-ins and summaries.")} />
         {err && <p id="m-err" className="error-text" role="alert"><AlertCircle size={16} aria-hidden /> {err}</p>}
-        <button type="button" className="btn btn-royal" onClick={add} style={{ alignSelf: 'flex-start' }}><Plus size={18} aria-hidden /> Add to household</button>
+        <button type="button" className="btn btn-royal" onClick={add} style={{ alignSelf: 'flex-start' }}><Plus size={18} aria-hidden />{t(" Add to household")}</button>
       </fieldset>
     </>
   );
 }
 
 function StepGoals({ headRef, d, setD }: SP) {
+  useLanguage();
   return (
     <>
       <div className="stack stack-sm">
-        <h2 id="step-title" tabIndex={-1} ref={headRef}>What would you like to strengthen?</h2>
-        <p className="muted">Choose one or more goals. They help rank suggestions, and you can change them any time.</p>
+        <h2 id="step-title" tabIndex={-1} ref={headRef}>{t("What would you like to strengthen?")}</h2>
+        <p className="muted">{t("Choose one or more goals. They help rank suggestions, and you can change them any time.")}</p>
       </div>
       <fieldset>
-        <legend className="sr-only">Family goals</legend>
+        <legend className="sr-only">{t("Family goals")}</legend>
         <div className="choices">
           {GOALS.map((g) => <ChoiceCard key={g.id} type="checkbox" name="goals" value={g.id} label={g.label} hint={g.hint} checked={d.goals.includes(g.id)} onChange={(c) => setD((x) => ({ ...x, goals: c ? [...x.goals, g.id] : x.goals.filter((y) => y !== g.id) }))} />)}
         </div>
@@ -242,34 +247,36 @@ function StepGoals({ headRef, d, setD }: SP) {
 }
 
 function StepPrivacy({ headRef, d, setD }: SP) {
+  useLanguage();
   const f = d.consent.fields;
   const set = (k: keyof typeof f, v: boolean) => setD((x) => ({ ...x, consent: { ...x.consent, fields: { ...x.consent.fields, [k]: v } } }));
   return (
     <>
       <div className="stack stack-sm">
-        <h2 id="step-title" tabIndex={-1} ref={headRef}>Privacy and sharing</h2>
-        <p className="muted">Decide what the household summary may include. Members can also decide for themselves.</p>
+        <h2 id="step-title" tabIndex={-1} ref={headRef}>{t("Privacy and sharing")}</h2>
+        <p className="muted">{t("Decide what the household summary may include. Members can also decide for themselves.")}</p>
       </div>
       <ul className="tick-list">
-        <li>Signed-in records are encrypted for their chosen recipients. Sample characters are fictional perspectives.</li>
-        <li>Household summaries contain only selected information.</li>
-        <li>Sharing can be revoked at any time.</li>
-        <li>Prototype data can be reset.</li>
-        <li>No secret monitoring is permitted.</li>
+        <li>{t("Signed-in records are encrypted for their chosen recipients. Sample characters are fictional perspectives.")}</li>
+        <li>{t("Household summaries contain only selected information.")}</li>
+        <li>{t("Sharing can be revoked at any time.")}</li>
+        <li>{t("Prototype data can be reset.")}</li>
+        <li>{t("No secret monitoring is permitted.")}</li>
       </ul>
       <div className="stack">
-        <Switch checked={f.mood} onChange={(v) => set('mood', v)} label="Household mood summary" description="A combined, household-level trend. Never individual entries." />
-        <Switch checked={f.workload} onChange={(v) => set('workload', v)} label="Workload level" description="For example “busy week”, not the details behind it." />
-        <Switch checked={f.sleep} onChange={(v) => set('sleep', v)} label="Sleep consistency summary" description="Off by default. Shows only whether routines are steady." />
-        <Switch checked={f.careStatus} onChange={(v) => set('careStatus', v)} label="Care routine status" description="Whether reminders were completed, not health details." />
-        <Switch checked={f.schedule} onChange={(v) => set('schedule', v)} label="Shared schedule" description="Events assigned to a member are visible to the household." />
-        <Switch checked={d.consent.allowBackupNotification} onChange={(v) => setD((x) => ({ ...x, consent: { ...x.consent, allowBackupNotification: v } }))} label="Allow a backup person to be notified for required care reminders" description="Only after the person receiving care and the backup both agree." />
+        <Switch checked={f.mood} onChange={(v) => set('mood', v)} label={t("Household mood summary")} description={t("A combined, household-level trend. Never individual entries.")} />
+        <Switch checked={f.workload} onChange={(v) => set('workload', v)} label={t("Workload level")} description={t("For example “busy week”, not the details behind it.")} />
+        <Switch checked={f.sleep} onChange={(v) => set('sleep', v)} label={t("Sleep consistency summary")} description={t("Off by default. Shows only whether routines are steady.")} />
+        <Switch checked={f.careStatus} onChange={(v) => set('careStatus', v)} label={t("Care routine status")} description={t("Whether reminders were completed, not health details.")} />
+        <Switch checked={f.schedule} onChange={(v) => set('schedule', v)} label={t("Shared schedule")} description={t("Events assigned to a member are visible to the household.")} />
+        <Switch checked={d.consent.allowBackupNotification} onChange={(v) => setD((x) => ({ ...x, consent: { ...x.consent, allowBackupNotification: v } }))} label={t("Allow a backup person to be notified for required care reminders")} description={t("Only after the person receiving care and the backup both agree.")} />
       </div>
     </>
   );
 }
 
 function StepPrefs({ headRef, d, setD }: SP) {
+  useLanguage();
   const p = d.prefs;
   const [day, setDay] = useState<DayIndex>(4);
   const [start, setStart] = useState('18:00');
@@ -285,36 +292,36 @@ function StepPrefs({ headRef, d, setD }: SP) {
   return (
     <>
       <div className="stack stack-sm">
-        <h2 id="step-title" tabIndex={-1} ref={headRef}>Preferences</h2>
-        <p className="muted">These keep suggestions realistic for your week.</p>
+        <h2 id="step-title" tabIndex={-1} ref={headRef}>{t("Preferences")}</h2>
+        <p className="muted">{t("These keep suggestions realistic for your week.")}</p>
       </div>
-      <fieldset><legend className="label">Reminder style</legend>
+      <fieldset><legend className="label">{t("Reminder style")}</legend>
         <div className="choices">{reminders.map(([id, l, h]) => <ChoiceCard key={id} name="rem" value={id} label={l} hint={h} checked={p.reminders === id} onChange={() => setP({ reminders: id })} />)}</div>
       </fieldset>
-      <fieldset><legend className="label">Activities your family enjoys</legend>
+      <fieldset><legend className="label">{t("Activities your family enjoys")}</legend>
         <div className="choices">{ACTIVITIES.map((a) => <ChoiceCard key={a.id} type="checkbox" name="acts" value={a.id} label={a.label} checked={p.activities.includes(a.id)} onChange={(c) => setP({ activities: c ? [...p.activities, a.id as ActivityType] : p.activities.filter((y) => y !== a.id) })} />)}</div>
       </fieldset>
-      <fieldset className="stack"><legend className="label">Shared times everyone is usually free</legend>
-        {p.windows.length > 0 && <ul className="member-list">{p.windows.map((w, i) => <li key={i} className="member-row"><span className="grow">{DAY_NAMES[w.day]}, {w.start}–{w.end}</span><button type="button" className="btn btn-ghost btn-icon" aria-label={`Remove ${DAY_NAMES[w.day]} window`} onClick={() => setP({ windows: p.windows.filter((_, j) => j !== i) })}><X size={18} aria-hidden /></button></li>)}</ul>}
+      <fieldset className="stack"><legend className="label">{t("Shared times everyone is usually free")}</legend>
+        {p.windows.length > 0 && <ul className="member-list">{p.windows.map((w, i) => <li key={i} className="member-row"><span className="grow">{t(DAY_NAMES[w.day])}, {w.start}–{w.end}</span><button type="button" className="btn btn-ghost btn-icon" aria-label={`Remove ${DAY_NAMES[w.day]} window`} onClick={() => setP({ windows: p.windows.filter((_, j) => j !== i) })}><X size={18} aria-hidden /></button></li>)}</ul>}
         <div className="grid grid-3">
-          <div className="field"><label className="label" htmlFor="w-day">Day</label><select id="w-day" className="select" value={day} onChange={(e) => setDay(Number(e.target.value) as DayIndex)}>{DAY_NAMES.map((n, i) => <option key={n} value={i}>{n}</option>)}</select></div>
-          <div className="field"><label className="label" htmlFor="w-s">From</label><input id="w-s" type="time" className="input" value={start} onChange={(e) => setStart(e.target.value)} /></div>
-          <div className="field"><label className="label" htmlFor="w-e">Until</label><input id="w-e" type="time" className="input" value={end} onChange={(e) => setEnd(e.target.value)} /></div>
+          <div className="field"><label className="label" htmlFor="w-day">{t("Day")}</label><select id="w-day" className="select" value={day} onChange={(e) => setDay(Number(e.target.value) as DayIndex)}>{DAY_NAMES.map((n, i) => <option key={n} value={i}>{t(n)}</option>)}</select></div>
+          <div className="field"><label className="label" htmlFor="w-s">{t("From")}</label><input id="w-s" type="time" className="input" value={start} onChange={(e) => setStart(e.target.value)} /></div>
+          <div className="field"><label className="label" htmlFor="w-e">{t("Until")}</label><input id="w-e" type="time" className="input" value={end} onChange={(e) => setEnd(e.target.value)} /></div>
         </div>
         {werr && <p className="error-text" role="alert"><AlertCircle size={16} aria-hidden /> {werr}</p>}
-        <button type="button" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={addWindow}><Plus size={18} aria-hidden /> Add shared time</button>
+        <button type="button" className="btn btn-secondary" style={{ alignSelf: 'flex-start' }} onClick={addWindow}><Plus size={18} aria-hidden />{t(" Add shared time")}</button>
       </fieldset>
       <div className="field">
-        <label className="label" htmlFor="maxmin">Maximum family-action time per day</label>
+        <label className="label" htmlFor="maxmin">{t("Maximum family-action time per day")}</label>
         <select id="maxmin" className="select" value={p.maxDailyMinutes} onChange={(e) => setP({ maxDailyMinutes: Number(e.target.value) })}>
-          {[20, 30, 45, 60, 90, 120].map((m) => <option key={m} value={m}>{m} minutes</option>)}
+          {[20, 30, 45, 60, 90, 120].map((m) => <option key={m} value={m}>{m}{t(" minutes")}</option>)}
         </select>
-        <span className="hint">Plans never exceed two small actions a day.</span>
+        <span className="hint">{t("Plans never exceed two small actions a day.")}</span>
       </div>
-      <fieldset className="stack"><legend className="label">Accessibility options</legend>
-        <Switch checked={p.largeText} onChange={(v) => setP({ largeText: v })} label="Larger text" />
-        <Switch checked={p.highContrast} onChange={(v) => setP({ highContrast: v })} label="Higher contrast" />
-        <Switch checked={p.reduceMotion} onChange={(v) => setP({ reduceMotion: v })} label="Reduce motion" description="Also follows your device setting automatically." />
+      <fieldset className="stack"><legend className="label">{t("Accessibility options")}</legend>
+        <Switch checked={p.largeText} onChange={(v) => setP({ largeText: v })} label={t("Larger text")} />
+        <Switch checked={p.highContrast} onChange={(v) => setP({ highContrast: v })} label={t("Higher contrast")} />
+        <Switch checked={p.reduceMotion} onChange={(v) => setP({ reduceMotion: v })} label={t("Reduce motion")} description={t("Also follows your device setting automatically.")} />
       </fieldset>
     </>
   );

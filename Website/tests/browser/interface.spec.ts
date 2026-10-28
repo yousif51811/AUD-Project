@@ -1,7 +1,7 @@
 import {PrismaClient} from '@prisma/client';
 import {test,expect} from '@playwright/test';
 test.beforeEach(async()=>{const url=new URL(process.env.DATABASE_URL??'');if(!url.pathname.endsWith('_test')||!['localhost','127.0.0.1'].includes(url.hostname))throw new Error('Browser fixture tests require a local test database.');const db=new PrismaClient();try{await db.rateLimit.deleteMany();}finally{await db.$disconnect();}});
-const routes=['/','/demo','/dashboard','/plan','/schedule','/coach','/assessment','/results','/student','/care','/memories','/trust','/sign-up','/account','/family','/check-ins','/notifications','/tasks','/missing-page'];
+const routes=['/','/about','/onboarding','/tour','/sign-in','/settings','/demo','/dashboard','/plan','/schedule','/coach','/assessment','/results','/student','/care','/memories','/trust','/sign-up','/account','/family','/check-ins','/notifications','/tasks','/missing-page'];
 for(const width of [360,768,1440])for(const palette of ['light','dark'] as const)test(`${width}px ${palette}: all screens`,async({page})=>{
  test.setTimeout(180000);await page.setViewportSize({width,height:1000});await page.emulateMedia({colorScheme:palette});const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  for(const route of routes){await page.goto(route);await expect(page.locator('h1:visible')).toHaveCount(1);await expect(page.locator('h1:visible')).toBeVisible();await expect(page.locator('html')).toHaveAttribute('data-theme',palette);const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1);expect(overflow,route).toBe(false);}

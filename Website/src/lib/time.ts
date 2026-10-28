@@ -1,3 +1,4 @@
+import { languageStore } from '@/lib/language';
 import type { DayIndex } from '@/types';
 
 export const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -17,7 +18,7 @@ export function fromMin(total: number): string {
 
 export function formatTime(t: string): string {
   const [h, m] = t.split(':').map(Number);
-  const suffix = h >= 12 ? 'PM' : 'AM';
+  const suffix = languageStore.getSnapshot() === 'ar' ? h >= 12 ? 'م' : 'ص' : h >= 12 ? 'PM' : 'AM';
   const hh = h % 12 === 0 ? 12 : h % 12;
   return `${hh}:${String(m).padStart(2, '0')} ${suffix}`;
 }

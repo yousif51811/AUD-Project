@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import { Check, Minus, X } from 'lucide-react';
 
 type Cell = 'default' | 'optional' | 'never';
@@ -18,18 +19,19 @@ const ROWS: { item: string; cells: Cell[] }[] = [
 const LABEL: Record<Cell, string> = { default: 'Default', optional: 'If the member chooses', never: 'Never' };
 
 export function PrivacyMatrix() {
+  useLanguage();
   return (
-    <div className="table-wrap" tabIndex={0} role="region" aria-label="Privacy matrix (scrollable)">
+    <div className="table-wrap" tabIndex={0} role="region" aria-label={t("Privacy matrix (scrollable)")}>
       <table className="matrix">
-        <caption className="sr-only">Privacy matrix: what is private, shared as a summary, shared with selected members, or visible to the household</caption>
-        <thead><tr><th scope="col">Information</th>{COLS.map((c) => <th key={c} scope="col">{c}</th>)}</tr></thead>
+        <caption className="sr-only">{t("Privacy matrix: what is private, shared as a summary, shared with selected members, or visible to the household")}</caption>
+        <thead><tr><th scope="col">{t("Information")}</th>{COLS.map((c) => <th key={c} scope="col">{t(c)}</th>)}</tr></thead>
         <tbody>
           {ROWS.map((r) => (
-            <tr key={r.item}>
-              <th scope="row">{r.item}</th>
+            <tr key={t(r.item)}>
+              <th scope="row">{t(r.item)}</th>
               {r.cells.map((c, i) => (
                 <td key={i} className={`mx-${c}`}>
-                  <span className="mx-cell">{c === 'default' ? <Check size={16} aria-hidden /> : c === 'optional' ? <Minus size={16} aria-hidden /> : <X size={16} aria-hidden />}<span>{LABEL[c]}</span></span>
+                  <span className="mx-cell">{c === 'default' ? <Check size={16} aria-hidden /> : c === 'optional' ? <Minus size={16} aria-hidden /> : <X size={16} aria-hidden />}<span>{t(LABEL[c])}</span></span>
                 </td>
               ))}
             </tr>

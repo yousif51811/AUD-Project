@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import {SharedStudentSummaries} from '@/components/family/SharedStudentSummaries';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -19,6 +20,7 @@ const ASKS = ['move one responsibility', 'have a quiet evening', 'plan my study 
 const UNTILS = ['Thursday', 'after my assessments', 'the weekend', 'next week'];
 
 export default function Student() {
+  useLanguage();
   useDocumentTitle('Student support');
   const { profile, schedule, student, updateStudent, today, restoreDemo } = useApp();
   const { toast } = useToast();
@@ -42,8 +44,8 @@ export default function Student() {
   }, [schedule, stu, today]);
 
   if (!profile || !stu || !data) {
-    return (<><PageHeader title="Student support" /><EmptyState icon={<GraduationCap size={26} />} title="No student in this household" message="Add a student in household setup to see exam support, or restore the Al Noor demo."
-      actions={<><Link to="/onboarding" className="btn btn-primary">Set up my household</Link><button type="button" className="btn btn-secondary" onClick={() => { restoreDemo(); toast('Al Noor demo restored.'); }}>Restore Al Noor demo</button></>} /></>);
+    return (<><PageHeader title={t("Student support")} /><EmptyState icon={<GraduationCap size={26} />} title={t("No student in this household")} message={t("Add a student in household setup to see exam support, or restore the Al Noor demo.")}
+      actions={<><Link to="/onboarding" className="btn btn-primary">{t("Set up my household")}</Link><button type="button" className="btn btn-secondary" onClick={() => { restoreDemo(); toast('Al Noor demo restored.'); }}>{t("Restore Al Noor demo")}</button></>} /></>);
   }
 
   const peakLevel = !data.peak ? 'No data' : data.peak.m > OVERLOAD_MINUTES ? 'Overloaded' : data.peak.m > 540 ? 'Heavy' : data.peak.m > 420 ? 'Busy' : 'Manageable';
@@ -70,88 +72,88 @@ export default function Student() {
   const sh = student.shares;
   return (
     <div className="stack stack-lg">
-      <PageHeader eyebrow={`Student support · ${stu.name}${stu.grade ? `, ${stu.grade}` : ''}`} title="Study, rest & a little space." lede={("A space for study, rest, and asking for support. Personal records stay private; you choose the summaries to share.")} />
-      <SharedStudentSummaries/><SafetyNotice tone="info" title="You are in control.">{('Your personal notes are encrypted for you. Enabling a summary publishes only that selected information to your family. Sample perspectives are fictional.')}</SafetyNotice>
+      <PageHeader eyebrow={`Student support · ${stu.name}${stu.grade ? `, ${stu.grade}` : ''}`} title={t("Study, rest & a little space.")} lede={(t("A space for study, rest, and asking for support. Personal records stay private; you choose the summaries to share."))} />
+      <SharedStudentSummaries/><SafetyNotice tone="info" title={t("You are in control.")}>{(t("Your personal notes are encrypted for you. Enabling a summary publishes only that selected information to your family. Sample perspectives are fictional."))}</SafetyNotice>
 
       <div className="grid-12">
         <section className="card col-4 stack" aria-labelledby="wl-h">
-          <h2 id="wl-h" className="card-title">Current workload</h2>
+          <h2 id="wl-h" className="card-title">{t("Current workload")}</h2>
           <p><strong style={{ fontSize: 'var(--fs-2xl)' }}>{peakLevel}</strong></p>
           <MiniMeter value={Math.min(data.peak?.m ?? 0, 720)} max={720} label={`Busiest day: ${data.peak ? minutesLabel(data.peak.m) : 'none'} scheduled`} />
-          <p className="small muted">Busiest upcoming day: {data.peak ? `${DAY_NAMES[data.peak.d]}, ${minutesLabel(data.peak.m)} scheduled` : 'none'}. Today: {minutesLabel(data.todayLoad)}.</p>
-          <p className="small"><strong>Task load:</strong> {data.tasks.length} household task{data.tasks.length === 1 ? '' : 's'} this week ({minutesLabel(data.taskMin)}).</p>
+          <p className="small muted">{t("Busiest upcoming day: ")}{data.peak ? `${DAY_NAMES[data.peak.d]}, ${minutesLabel(data.peak.m)} scheduled` : t("none")}{t(". Today: ")}{minutesLabel(data.todayLoad)}.</p>
+          <p className="small"><strong>{t("Task load:")}</strong> {data.tasks.length}{t(" household task")}{data.tasks.length === 1 ? '' : t("s")}{t(" this week (")}{minutesLabel(data.taskMin)}).</p>
         </section>
 
         <section className="card col-4 stack" aria-labelledby="ex-h">
-          <h2 id="ex-h" className="card-title">Exam countdown</h2>
-          {data.exams.length === 0 ? <p className="muted small">No assessments in the schedule. Add one as a School event.</p> : (
-            <ul className="stack stack-sm" style={{ listStyle: 'none' }}>{data.exams.map((e) => { const left = e.day - today; return (<li key={e.id} className="between row"><span><strong>{e.title}</strong><br /><span className="xs muted">{DAY_NAMES[e.day]}, {formatTime(e.start)}</span></span><span className={left >= 0 ? 'pill pill-violet' : 'pill'}>{left < 0 ? 'Done' : left === 0 ? 'Today' : `${left} day${left === 1 ? '' : 's'}`}</span></li>); })}</ul>
+          <h2 id="ex-h" className="card-title">{t("Exam countdown")}</h2>
+          {data.exams.length === 0 ? <p className="muted small">{t("No assessments in the schedule. Add one as a School event.")}</p> : (
+            <ul className="stack stack-sm" style={{ listStyle: 'none' }}>{data.exams.map((e) => { const left = e.day - today; return (<li key={e.id} className="between row"><span><strong>{e.title}</strong><br /><span className="xs muted">{t(DAY_NAMES[e.day])}, {formatTime(e.start)}</span></span><span className={left >= 0 ? 'pill pill-violet' : 'pill'}>{left < 0 ? t("Done") : left === 0 ? t("Today") : `${left} day${left === 1 ? '' : 's'}`}</span></li>); })}</ul>
           )}
-          {nextExam && <p className="xs muted">Next: {nextExam.title}.</p>}
+          {nextExam && <p className="xs muted">{t("Next: ")}{nextExam.title}.</p>}
         </section>
 
         <section className="card col-4 stack" aria-labelledby="sb-h">
-          <h2 id="sb-h" className="card-title">Study blocks</h2>
-          {data.study.length === 0 ? <p className="muted small">No study blocks planned. Ask the Smart Schedule to protect one.</p> : (
-            <ul className="stack stack-sm" style={{ listStyle: 'none' }}>{data.study.map((e) => (<li key={e.id}><strong>{DAY_SHORT[e.day]} {formatTime(e.start)}–{formatTime(e.end)}</strong> {e.protected && <span className="pill pill-ok">Protected</span>}<br /><span className="xs muted">{e.title}</span></li>))}</ul>
+          <h2 id="sb-h" className="card-title">{t("Study blocks")}</h2>
+          {data.study.length === 0 ? <p className="muted small">{t("No study blocks planned. Ask the Smart Schedule to protect one.")}</p> : (
+            <ul className="stack stack-sm" style={{ listStyle: 'none' }}>{data.study.map((e) => (<li key={e.id}><strong>{t(DAY_SHORT[e.day])} {formatTime(e.start)}–{formatTime(e.end)}</strong> {e.protected && <span className="pill pill-ok">{t("Protected")}</span>}<br /><span className="xs muted">{e.title}</span></li>))}</ul>
           )}
-          <Link to="/schedule" className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>Protect study time</Link>
+          <Link to="/schedule" className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }}>{t("Protect study time")}</Link>
         </section>
 
         <section className="card col-6 stack" aria-labelledby="goal-h">
-          <h2 id="goal-h" className="card-title">Today’s achievable goal</h2>
-          <div className="field"><label className="label" htmlFor="goal">One thing that would make today a good day</label><input id="goal" className="input" value={goalDraft} maxLength={120} onChange={(e) => setGoalDraft(e.target.value)} onBlur={() => updateStudent((s) => ({ ...s, goal: sanitizeText(goalDraft, 120) }))} /></div>
-          <p className="xs muted">Keep it small enough to finish. Saved automatically on this device.</p>
+          <h2 id="goal-h" className="card-title">{t("Today’s achievable goal")}</h2>
+          <div className="field"><label className="label" htmlFor="goal">{t("One thing that would make today a good day")}</label><input id="goal" className="input" value={goalDraft} maxLength={120} onChange={(e) => setGoalDraft(e.target.value)} onBlur={() => updateStudent((s) => ({ ...s, goal: sanitizeText(goalDraft, 120) }))} /></div>
+          <p className="xs muted">{t("Keep it small enough to finish. Saved automatically on this device.")}</p>
           <FocusTimer />
         </section>
 
         <section className="card col-6 stack" aria-labelledby="sl-h">
-          <h2 id="sl-h" className="card-title">Sleep routine</h2>
+          <h2 id="sl-h" className="card-title">{t("Sleep routine")}</h2>
           <div className="grid grid-2">
-            <div className="field"><label className="label" htmlFor="bed">Target bedtime</label><input id="bed" type="time" className="input" value={student.bedtime} onChange={(e) => updateStudent((s) => ({ ...s, bedtime: e.target.value || s.bedtime }))} /></div>
-            <div className="field"><label className="label" htmlFor="wake">Wake time</label><input id="wake" type="time" className="input" value={student.wake} onChange={(e) => updateStudent((s) => ({ ...s, wake: e.target.value || s.wake }))} /></div>
+            <div className="field"><label className="label" htmlFor="bed">{t("Target bedtime")}</label><input id="bed" type="time" className="input" value={student.bedtime} onChange={(e) => updateStudent((s) => ({ ...s, bedtime: e.target.value || s.bedtime }))} /></div>
+            <div className="field"><label className="label" htmlFor="wake">{t("Wake time")}</label><input id="wake" type="time" className="input" value={student.wake} onChange={(e) => updateStudent((s) => ({ ...s, wake: e.target.value || s.wake }))} /></div>
           </div>
-          <p className="small">Target sleep: <strong>{target.toFixed(1)} h</strong> · Last {nights.length} nights average: <strong>{avg ? avg.toFixed(1) : '—'} h</strong> · <span className={consistency === 'Consistent' ? 'pill pill-ok' : 'pill pill-warn'}>{consistency}</span></p>
+          <p className="small">{t("Target sleep: ")}<strong>{target.toFixed(1)}{t(" h")}</strong>{t(" · Last ")}{nights.length}{t(" nights average: ")}<strong>{avg ? avg.toFixed(1) : '—'}{t(" h")}</strong> · <span className={consistency === 'Consistent' ? 'pill pill-ok' : 'pill pill-warn'}>{consistency}</span></p>
           <div className="sleep-bars" role="img" aria-label={`Hours slept over the last ${nights.length} nights: ${nights.join(', ')}. Target ${target.toFixed(1)} hours.`}>
             {nights.map((h, i) => (<span key={i} className="sleep-bar" style={{ height: `${Math.min(100, (h / 10) * 100)}%` }}><i>{h}</i></span>))}
           </div>
-          <div className="field"><label className="label" htmlFor="sl-in">Log last night (hours)</label>
-            <div className="row"><input id="sl-in" className="input" inputMode="decimal" value={sleepIn} onChange={(e) => { setSleepIn(e.target.value); setSleepErr(''); }} aria-invalid={!!sleepErr} aria-describedby={sleepErr ? 'sl-err' : undefined} style={{ maxWidth: 140 }} /><button type="button" className="btn btn-secondary" onClick={logSleep}>Log sleep</button></div>
+          <div className="field"><label className="label" htmlFor="sl-in">{t("Log last night (hours)")}</label>
+            <div className="row"><input id="sl-in" className="input" inputMode="decimal" value={sleepIn} onChange={(e) => { setSleepIn(e.target.value); setSleepErr(''); }} aria-invalid={!!sleepErr} aria-describedby={sleepErr ? 'sl-err' : undefined} style={{ maxWidth: 140 }} /><button type="button" className="btn btn-secondary" onClick={logSleep}>{t("Log sleep")}</button></div>
             {sleepErr && <span id="sl-err" className="error-text" role="alert">{sleepErr}</span>}</div>
         </section>
 
         <section className="card col-7 stack" aria-labelledby="ask-h">
-          <h2 id="ask-h" className="card-title">Ask for support</h2>
-          <p className="small muted">Build a clear, calm message. You can copy it or share it, or keep it to yourself.</p>
+          <h2 id="ask-h" className="card-title">{t("Ask for support")}</h2>
+          <p className="small muted">{t("Build a clear, calm message. You can copy it or share it, or keep it to yourself.")}</p>
           <div className="grid grid-2">
-            <div className="field"><label className="label" htmlFor="a-f">I am feeling</label><select id="a-f" className="select" value={feeling} onChange={(e) => setFeeling(e.target.value)}>{FEELINGS.map((x) => <option key={x}>{x}</option>)}</select></div>
-            <div className="field"><label className="label" htmlFor="a-b">because</label><select id="a-b" className="select" value={because} onChange={(e) => setBecause(e.target.value)}>{BECAUSES.map((x) => <option key={x}>{x}</option>)}</select></div>
-            <div className="field"><label className="label" htmlFor="a-a">Could we</label><select id="a-a" className="select" value={ask} onChange={(e) => setAsk(e.target.value)}>{ASKS.map((x) => <option key={x}>{x}</option>)}</select></div>
-            <div className="field"><label className="label" htmlFor="a-u">until</label><select id="a-u" className="select" value={until} onChange={(e) => setUntil(e.target.value)}>{UNTILS.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div className="field"><label className="label" htmlFor="a-f">{t("I am feeling")}</label><select id="a-f" className="select" value={feeling} onChange={(e) => setFeeling(e.target.value)}>{FEELINGS.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div className="field"><label className="label" htmlFor="a-b">{t("because")}</label><select id="a-b" className="select" value={because} onChange={(e) => setBecause(e.target.value)}>{BECAUSES.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div className="field"><label className="label" htmlFor="a-a">{t("Could we")}</label><select id="a-a" className="select" value={ask} onChange={(e) => setAsk(e.target.value)}>{ASKS.map((x) => <option key={x}>{x}</option>)}</select></div>
+            <div className="field"><label className="label" htmlFor="a-u">{t("until")}</label><select id="a-u" className="select" value={until} onChange={(e) => setUntil(e.target.value)}>{UNTILS.map((x) => <option key={x}>{x}</option>)}</select></div>
           </div>
           <blockquote className="starter" aria-live="polite">{sentence}</blockquote>
           <div className="cluster">
-            <button type="button" className="btn btn-secondary" onClick={async () => toast((await copyText(sentence)) ? 'Message copied. Send it however you prefer.' : 'Copy is not available here.')}><Clipboard size={16} aria-hidden /> Copy message</button>
-            <button type="button" className="btn btn-royal" onClick={shareSupport}><Share2 size={16} aria-hidden /> Share Summary with household</button>
+            <button type="button" className="btn btn-secondary" onClick={async () => toast((await copyText(sentence)) ? 'Message copied. Send it however you prefer.' : 'Copy is not available here.')}><Clipboard size={16} aria-hidden />{t(" Copy message")}</button>
+            <button type="button" className="btn btn-royal" onClick={shareSupport}><Share2 size={16} aria-hidden />{t(" Share Summary with household")}</button>
           </div>
-          <div className="card card-tint stack stack-sm"><strong>Suggestion for the parent conversation</strong><p className="small">“What is one thing we can remove from this week to make it more manageable?” Listen first, then agree on one small change together.</p></div>
+          <div className="card card-tint stack stack-sm"><strong>{t("Suggestion for the parent conversation")}</strong><p className="small">{t("“What is one thing we can remove from this week to make it more manageable?” Listen first, then agree on one small change together.")}</p></div>
         </section>
 
         <section className="card col-5 stack" aria-labelledby="share-h">
-          <h2 id="share-h" className="card-title"><EyeOff size={20} aria-hidden /> Sharing controls</h2>
-          <Switch checked={sh.workload} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, workload: v } }))} label="Workload level" description="e.g. “Heavy week”, not the details." />
-          <Switch checked={sh.exams} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, exams: v } }))} label="Exam dates" />
-          <Switch checked={sh.support} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, support: v } }))} label="My support request" />
-          <Switch checked={sh.sleep} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, sleep: v } }))} label="Sleep consistency summary" description="Only “consistent or not”, never the hours." />
-          <div className="card card-tint stack stack-sm" aria-live="polite"><strong>What the household sees</strong>
+          <h2 id="share-h" className="card-title"><EyeOff size={20} aria-hidden />{t(" Sharing controls")}</h2>
+          <Switch checked={sh.workload} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, workload: v } }))} label={t("Workload level")} description={t("e.g. “Heavy week”, not the details.")} />
+          <Switch checked={sh.exams} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, exams: v } }))} label={t("Exam dates")} />
+          <Switch checked={sh.support} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, support: v } }))} label={t("My support request")} />
+          <Switch checked={sh.sleep} onChange={(v) => updateStudent((s) => ({ ...s, shares: { ...s.shares, sleep: v } }))} label={t("Sleep consistency summary")} description={t("Only “consistent or not”, never the hours.")} />
+          <div className="card card-tint stack stack-sm" aria-live="polite"><strong>{t("What the household sees")}</strong>
             <ul className="small" style={{ paddingInlineStart: 18 }}>
-              {sh.workload && <li>Workload: {peakLevel}</li>}
-              {sh.exams && <li>Exams: {data.exams.map((e) => `${e.title} (${DAY_SHORT[e.day]})`).join(', ') || 'none'}</li>}
-              {sh.support && <li>Request: {student.supportRequest || 'No request shared yet'}</li>}
-              {sh.sleep && <li>Sleep: {consistency}</li>}
-              {!sh.workload && !sh.exams && !sh.support && !sh.sleep && <li>Nothing is shared right now.</li>}
+              {sh.workload && <li>{t("Workload: ")}{peakLevel}</li>}
+              {sh.exams && <li>{t("Exams: ")}{data.exams.map((e) => `${e.title} (${DAY_SHORT[e.day]})`).join(', ') || 'none'}</li>}
+              {sh.support && <li>{t("Request: ")}{student.supportRequest || 'No request shared yet'}</li>}
+              {sh.sleep && <li>{t("Sleep: ")}{consistency}</li>}
+              {!sh.workload && !sh.exams && !sh.support && !sh.sleep && <li>{t("Nothing is shared right now.")}</li>}
             </ul>
-            <p className="xs muted">Private notes and exact feelings are never included.</p></div>
+            <p className="xs muted">{t("Private notes and exact feelings are never included.")}</p></div>
         </section>
       </div>
     </div>
@@ -159,6 +161,7 @@ export default function Student() {
 }
 
 function FocusTimer() {
+  useLanguage();
   const [mode, setMode] = useState<'focus' | 'break'>('focus');
   const total = mode === 'focus' ? 25 * 60 : 5 * 60;
   const [left, setLeft] = useState(total);
@@ -182,13 +185,13 @@ function FocusTimer() {
   const ss = String(left % 60).padStart(2, '0');
   return (
     <div className="card card-tint stack stack-sm">
-      <div className="between row"><strong>Break timer</strong>
-        <div className="tabs" role="group" aria-label="Timer mode"><button type="button" className="tab" aria-pressed={mode === 'focus'} onClick={() => { setMode('focus'); setMsg(''); }}>Focus 25</button><button type="button" className="tab" aria-pressed={mode === 'break'} onClick={() => { setMode('break'); setMsg(''); }}>Break 5</button></div></div>
+      <div className="between row"><strong>{t("Break timer")}</strong>
+        <div className="tabs" role="group" aria-label={t("Timer mode")}><button type="button" className="tab" aria-pressed={mode === 'focus'} onClick={() => { setMode('focus'); setMsg(''); }}>{t("Focus 25")}</button><button type="button" className="tab" aria-pressed={mode === 'break'} onClick={() => { setMode('break'); setMsg(''); }}>{t("Break 5")}</button></div></div>
       <div className="timer num" role="timer" aria-label={`${mm} minutes ${ss} seconds remaining`}>{mm}:{ss}</div>
-      <MiniMeter value={total - left} max={total} label="Timer progress" />
+      <MiniMeter value={total - left} max={total} label={t("Timer progress")} />
       <div className="cluster">
-        <button type="button" className="btn btn-royal btn-sm" onClick={() => { setMsg(''); setRunning((r) => !r); }} disabled={left === 0}>{running ? <><Pause size={16} aria-hidden /> Pause</> : <><Play size={16} aria-hidden /> {left < total ? 'Resume' : 'Start'}</>}</button>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRunning(false); setLeft(total); setMsg(''); }}><RotateCcw size={16} aria-hidden /> Reset</button>
+        <button type="button" className="btn btn-royal btn-sm" onClick={() => { setMsg(''); setRunning((r) => !r); }} disabled={left === 0}>{running ? <><Pause size={16} aria-hidden />{t(" Pause")}</> : <><Play size={16} aria-hidden /> {left < total ? t("Resume") : t("Start")}</>}</button>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setRunning(false); setLeft(total); setMsg(''); }}><RotateCcw size={16} aria-hidden />{t(" Reset")}</button>
       </div>
       <p className="sr-only" role="status" aria-live="polite">{msg}</p>
       {msg && <p className="small strong" aria-hidden>{msg}</p>}

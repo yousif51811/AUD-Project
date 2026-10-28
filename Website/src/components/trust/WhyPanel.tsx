@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import { useState } from 'react';
 import type { Recommendation } from '@/types';
 
@@ -13,24 +14,25 @@ export const RULES: Record<Recommendation['kind'], string> = {
 
 /** Interactive “Why did I receive this?” explainer, driven by the real recommendation engine output. */
 export function WhyPanel({ recs, rules = RULES, defaultId }: { recs: Recommendation[]; rules?: Record<Recommendation['kind'], string>; defaultId?: string }) {
+  useLanguage();
   const [pick, setPick] = useState(defaultId ?? recs[0]?.id ?? '');
   const rec = recs.find((r) => r.id === pick) ?? recs[0];
-  if (!rec) return <p className="muted">No recommendations to explain yet.</p>;
+  if (!rec) return <p className="muted">{t("No recommendations to explain yet.")}</p>;
   return (
     <div className="stack stack-lg">
       <div className="field" style={{ maxWidth: 520 }}>
-        <label className="label" htmlFor="why-sel">Recommendation</label>
+        <label className="label" htmlFor="why-sel">{t("Recommendation")}</label>
         <select id="why-sel" className="select" value={rec.id} onChange={(e) => setPick(e.target.value)}>
           {recs.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
         </select>
       </div>
       <div className="why-grid" aria-live="polite">
-        <div className="card card-tint stack stack-sm"><h3>Input factors</h3><ul className="tick-list">{rec.signals.map((s) => <li key={s}>{s}</li>)}</ul></div>
-        <div className="card card-tint stack stack-sm"><h3>Rule logic</h3><p className="small">{rules[rec.kind]}</p></div>
-        <div className="card card-tint stack stack-sm"><h3>Suggested action</h3><p className="small">{rec.action}</p><p className="xs muted">About {rec.minutes} minutes.</p></div>
-        <div className="card card-tint stack stack-sm"><h3>Your control</h3><p className="small">{rec.control}</p></div>
-        <div className="card card-tint stack stack-sm"><h3>Alternative action</h3><p className="small">{rec.alternative}</p></div>
-        <div className="card card-tint stack stack-sm"><h3>Plain-language explanation</h3><p className="small">{rec.why}</p></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Input factors")}</h3><ul className="tick-list">{rec.signals.map((s) => <li key={s}>{s}</li>)}</ul></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Rule logic")}</h3><p className="small">{t(rules[rec.kind])}</p></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Suggested action")}</h3><p className="small">{rec.action}</p><p className="xs muted">{t("About ")}{rec.minutes}{t(" minutes.")}</p></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Your control")}</h3><p className="small">{rec.control}</p></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Alternative action")}</h3><p className="small">{rec.alternative}</p></div>
+        <div className="card card-tint stack stack-sm"><h3>{t("Plain-language explanation")}</h3><p className="small">{rec.why}</p></div>
       </div>
     </div>
   );

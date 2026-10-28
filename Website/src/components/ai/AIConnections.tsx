@@ -4,20 +4,33 @@ import { cancelAIRequests } from '@/lib/model/engine';
 import { deviceStorageKey, openConnections, sealConnections } from '@/lib/model/connection-storage';
 import { connectionSchema, type AIConnection, type ProviderId } from '@/lib/model/providers';
 
+import type { AISelection, ServerAIConfig } from '@/lib/model/server-contract';
+
 type Connections = Partial<Record<ProviderId, AIConnection>>;
-interface Snapshot { tag: string; selected: ProviderId; connections: Connections; }
+interface Snapshot { tag: string; selected: AISelection; connections: Connections; }
 interface ConnectionContext {
-  selected: ProviderId; connections: Connections; ready: boolean; notice: string;
-  select: (provider: ProviderId) => void;
+  selected: AISelection; connections: Connections; ready: boolean; notice: string;
+  select: (provider: AISelection) => void;
   connect: (connection: AIConnection) => Promise<boolean>;
   disconnect: (provider: ProviderId) => Promise<void>;
+  server: ServerAIConfig | null; refreshServer: () => void;
 }
 const Context = createContext<ConnectionContext | null>(null);
-const empty = (): Snapshot => ({ tag: '', selected: 'groq', connections: {} });
+const empty = (): Snapshot => ({ tag: '', selected: 'server', connections: {} });
 
-/** This state and its optional encrypted browser copy never use the application API. */
+/** Personal keys and their encrypted browser copies never use the application API. */
 export function AIConnectionsProvider({ children }: { children: ReactNode }) {
   const w = useWorkspace();
+  const [server, setServer] = useState<ServerAIConfig | null>(null), [configRevision, setConfigRevision] = useState(0);
+  useEffect(() => {
+    let live = true;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    void fetch('/api/ai/config', {cache:'no-store',credentials:'same-origin',signal:controller.signal})
+      .then(async response => { if (!response.ok) throw new Error(); const value = await response.json(); if (typeof value.available !== 'boolean' || typeof value.model !== 'string' || !/^gemini-[a-zA-Z0-9._-]{1,110}$/.test(value.model)) throw new Error(); if (live) setServer({available:value.available,model:value.model}); })
+      .catch(() => { if (live) setServer({available:false,model:'gemini-3.5-flash-lite'}); }).finally(() => clearTimeout(timer));
+    return () => { live = false; controller.abort(); clearTimeout(timer); };
+  }, [configRevision]);
   const familyId = w.family?.id;
   const scope = w.mode === 'account' && w.user && w.family ? `${w.user.id}:${w.family.id}` : `demo:${w.actorId}`;
   const tag = `${scope}:${w.mode}:${w.generation}:${w.identity?.publicKey ?? ''}`;
@@ -28,7 +41,7 @@ export function AIConnectionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let live = true;
-    const current: Snapshot = { tag, selected: 'groq', connections: {} };
+    const current: Snapshot = { tag, selected: 'server', connections: {} };
     stateRef.current = current; setState(current); setNotice(''); setLoadedTag('');
     if (w.mode === 'account' && w.identity && familyId) {
       const identity = w.identity;
@@ -38,7 +51,7 @@ export function AIConnectionsProvider({ children }: { children: ReactNode }) {
           if (!raw) return;
           const saved = await openConnections(raw, scope, identity);
           if (!live || currentTag.current !== tag || stateRef.current !== current) return;
-          const next = { tag, selected: saved.selected, connections: Object.fromEntries(saved.connections.map(c => [c.provider, c])) };
+          const next: Snapshot = { tag, selected: 'server', connections: Object.fromEntries(saved.connections.map(c => [c.provider, c])) };
           stateRef.current = next; setState(next);
         } catch { if (live) setNotice('Saved AI connections could not be unlocked on this browser. Reconnect a provider; your family data is unaffected.'); }
         finally { if (live && currentTag.current === tag) setLoadedTag(tag); }
@@ -57,7 +70,7 @@ export function AIConnectionsProvider({ children }: { children: ReactNode }) {
     const turn = ++revision.current;
     if (w.mode !== 'account' || !w.identity || !w.family) return false;
     const remembered = Object.values(next.connections).filter((c): c is AIConnection => !!c?.remember);
-    const raw = remembered.length ? await sealConnections(scope, next.selected, remembered, w.identity) : null;
+    const raw = remembered.length ? await sealConnections(scope, next.selected === 'server' ? remembered[0].provider : next.selected, remembered, w.identity) : null;
     if (currentTag.current !== tag || turn !== revision.current) throw new DOMException('Connection changed.', 'AbortError');
     try {
       if (raw) localStorage.setItem(deviceStorageKey(scope), raw);
@@ -71,7 +84,7 @@ export function AIConnectionsProvider({ children }: { children: ReactNode }) {
   };
   const active = state.tag === tag ? state : { ...empty(), tag };
   const requireCurrent = () => { if (currentTag.current !== tag || stateRef.current.tag !== tag || loadedTag !== tag) throw new Error('The account or family changed. Wait for AI settings to unlock, then reconnect.'); };
-  return <Context.Provider value={{ ...active, ready: state.tag === tag && loadedTag === tag, notice,
+  return <Context.Provider value={{ ...active, ready: state.tag === tag && loadedTag === tag, notice, server, refreshServer: () => setConfigRevision(value => value + 1),
     select: provider => {
       requireCurrent(); cancelAIRequests(); const next = { ...stateRef.current, selected: provider }; publish(next);
       void persist(next).catch(() => { /* scope changes intentionally cancel persistence */ });

@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import { useId } from 'react';
 import { useInView } from '@/hooks/useInView';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
@@ -10,6 +11,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 /** Harmony Score ring. Animates only when entering view; a text equivalent is always provided. */
 export function ScoreRing({ score, status, statusKey, size = 200, dark = false, label = 'Household Harmony Score' }: { score: number; status: string; statusKey: string; size?: number; dark?: boolean; label?: string }) {
+  useLanguage();
   const [ref, seen] = useInView<HTMLDivElement>(0.3);
   const reduced = useReducedMotion();
   const r = 54;
@@ -18,20 +20,21 @@ export function ScoreRing({ score, status, statusKey, size = 200, dark = false, 
   const offset = show ? c * (1 - score / 100) : c;
   const color = STATUS_COLOR[statusKey] ?? '#b7d3df';
   return (
-    <div ref={ref} className="score-ring" style={{ width: size }} role="img" aria-label={`${label}: ${score} out of 100. Status: ${status}.`}>
+    <div ref={ref} className="score-ring" style={{ width: size }} role="img" aria-label={t('{label}: {score} out of 100. Status: {status}.', {label: t(label), score, status: t(status)})}>
       <svg viewBox="0 0 140 140" width={size} height={size} aria-hidden>
         <circle cx="70" cy="70" r={r} fill="none" stroke={dark ? 'rgba(255,255,255,0.16)' : '#e4eaf2'} strokeWidth="12" />
         <circle cx="70" cy="70" r={r} fill="none" stroke={color} strokeWidth="12" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset} transform="rotate(-90 70 70)" style={{ transition: reduced ? 'none' : 'stroke-dashoffset 1.1s cubic-bezier(.22,.8,.28,1)' }} />
       </svg>
       <div className="score-ring-center" style={{ color: dark ? '#fff' : 'var(--ink)' }}>
         <span className="score-num num" style={{ fontSize: size * 0.28 }}>{score}</span>
-        {size >= 120 && <span className="score-of">out of 100</span>}
+        {size >= 120 && <span className="score-of">{t("out of 100")}</span>}
       </div>
     </div>
   );
 }
 
 export function CategoryScoreBar({ c }: { c: CategoryScore }) {
+  useLanguage();
   const [ref, seen] = useInView<HTMLDivElement>(0.2);
   const reduced = useReducedMotion();
   const w = seen || reduced ? c.score : 0;
@@ -39,13 +42,13 @@ export function CategoryScoreBar({ c }: { c: CategoryScore }) {
   return (
     <div ref={ref} className="cat-bar">
       <div className="between row" style={{ alignItems: 'baseline' }}>
-        <span className="strong">{c.label}</span>
-        <span className="cluster" style={{ gap: 8 }}><span className="num strong">{c.applicable ? c.score : '—'}</span><span className={tone}>{c.statusLabel}</span></span>
+        <span className="strong">{t(c.label)}</span>
+        <span className="cluster" style={{ gap: 8 }}><span className="num strong">{c.applicable ? c.score : '—'}</span><span className={tone}>{t(c.statusLabel)}</span></span>
       </div>
-      <div className="progress" role="progressbar" aria-valuenow={c.score} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.label}: ${c.score} out of 100, ${c.statusLabel}`}>
+      <div className="progress" role="progressbar" aria-valuenow={c.score} aria-valuemin={0} aria-valuemax={100} aria-label={t('{label}: {score} out of 100, {status}', {label: t(c.label), score: c.score, status: t(c.statusLabel)})}>
         <span style={{ width: `${w}%`, transition: reduced ? 'none' : undefined }} />
       </div>
-      <p className="xs muted">{c.description}</p>
+      <p className="xs muted">{t(c.description)}</p>
     </div>
   );
 }
@@ -54,6 +57,7 @@ export interface TrendPoint { day: string; value: number }
 
 /** Seven-point line chart with a visible table-equivalent summary. */
 export function TrendChart({ points, label, summary }: { points: TrendPoint[]; label: string; summary: string }) {
+  useLanguage();
   const id = useId();
   const w = 320, h = 140, pad = 24;
   const min = 0, max = 100;
@@ -71,8 +75,8 @@ export function TrendChart({ points, label, summary }: { points: TrendPoint[]; l
         <path d={d} fill="none" stroke="#123c69" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
         {points.map((p, i) => (<g key={p.day}><circle cx={x(i)} cy={y(p.value)} r="4" fill="#fff" stroke="#123c69" strokeWidth="2" /><text x={x(i)} y={h - 6} textAnchor="middle" fontSize="10" fill="#3f4a5c">{p.day}</text></g>))}
       </svg>
-      <figcaption id={`${id}-c`} className="xs muted"><strong>{label}.</strong> {summary}</figcaption>
-      <details className="chart-data"><summary className="xs">View data as text</summary>
+      <figcaption id={`${id}-c`} className="xs muted"><strong>{t(label)}.</strong> {summary}</figcaption>
+      <details className="chart-data"><summary className="xs">{t("View data as text")}</summary>
         <ul className="xs">{points.map((p) => <li key={p.day}>{p.day}: {p.value}</li>)}</ul>
       </details>
     </figure>
@@ -83,6 +87,7 @@ const MEMBER_FILL: Record<string, string> = { blue: '#b7d3df', gold: '#e6c287', 
 
 /** Stacked responsibility distribution with legend and text summary. */
 export function ResponsibilityChart({ entries, label = 'Responsibility distribution', caption }: { entries: BalanceEntry[]; label?: string; caption?: string }) {
+  useLanguage();
   const total = entries.reduce((a, e) => a + e.percent, 0);
   const shown = entries.filter((e) => e.percent > 0);
   const top = [...entries].sort((a, b) => b.percent - a.percent)[0];
@@ -99,7 +104,7 @@ export function ResponsibilityChart({ entries, label = 'Responsibility distribut
       </div>
       <ul className="legend">
         {entries.map((e) => (
-          <li key={e.member.id}><span className="legend-dot" style={{ background: MEMBER_FILL[e.member.color] }} aria-hidden />{e.member.name} <span className="num strong">{e.percent}%</span> <span className="muted xs">({e.minutes} min)</span></li>
+          <li key={e.member.id}><span className="legend-dot" style={{ background: MEMBER_FILL[e.member.color] }} aria-hidden />{e.member.name} <span className="num strong">{e.percent}%</span> <span className="muted xs">({e.minutes}{t(" min)")}</span></li>
         ))}
       </ul>
       <figcaption className="xs muted">{caption ?? summary}</figcaption>
@@ -108,6 +113,7 @@ export function ResponsibilityChart({ entries, label = 'Responsibility distribut
 }
 
 export function MiniMeter({ value, max, label }: { value: number; max: number; label: string }) {
+  useLanguage();
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
   return (
     <div className="progress" role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={label}>

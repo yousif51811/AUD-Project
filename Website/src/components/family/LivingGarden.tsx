@@ -1,3 +1,4 @@
+import { t, useLanguage } from '@/i18n';
 import { useEffect, useRef } from 'react';
 import { Pause, Play } from 'lucide-react';
 import { useApp } from '@/state/store';
@@ -6,6 +7,7 @@ import { useDisplay } from '@/lib/display';
 
 /** Pointer scenery is decorative; moving the pointer never triggers React renders. */
 export function LivingBackdrop() {
+  useLanguage();
   const ref = useRef<HTMLDivElement>(null);
   const { profile } = useApp();
   const { actorId } = useWorkspace();
@@ -45,16 +47,18 @@ export function LivingBackdrop() {
 }
 
 export function GardenMotionControl() {
+  useLanguage();
   const { actorId } = useWorkspace();
   const { profile } = useApp();
   const [display, update] = useDisplay(actorId);
   const paused = display.reduceMotion ?? profile?.preferences.reduceMotion ?? false;
-  return <button type="button" className="garden-motion" aria-pressed={paused} title="Your device’s reduced-motion preference always applies." onClick={() => update({ reduceMotion: !paused })}>
-    {paused ? <Play size={13} aria-hidden/> : <Pause size={13} aria-hidden/>}{paused ? 'Resume scenery' : 'Pause scenery'}
+  return <button type="button" className="garden-motion" aria-pressed={paused} title={t("Your device’s reduced-motion preference always applies.")} onClick={() => update({ reduceMotion: !paused })}>
+    {paused ? <Play size={13} aria-hidden/> : <Pause size={13} aria-hidden/>}{paused ? t("Resume scenery") : t("Pause scenery")}
   </button>;
 }
 
 export function CourtyardDrawing() {
+  useLanguage();
   return <div className="courtyard-drawing" aria-hidden="true">
     <svg viewBox="0 0 520 340" fill="none">
       <ellipse className="courtyard-orbit" cx="270" cy="187" rx="213" ry="119" transform="rotate(-16 270 187)"/>
@@ -70,6 +74,6 @@ export function CourtyardDrawing() {
       <path className="courtyard-spark" d="M461 99v18m-9-9h18M66 273v12m-6-6h12M179 52v10m-5-5h10"/>
       <circle className="courtyard-dot" cx="68" cy="158" r="4"/><circle className="courtyard-dot" cx="453" cy="197" r="3"/>
     </svg>
-    <span className="courtyard-caption">a little space for all of us</span>
+    <span className="courtyard-caption">{t("a little space for all of us")}</span>
   </div>;
 }

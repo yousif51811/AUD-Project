@@ -1,1 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#071426"/><g stroke="#47E6C1" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M32 14 49 26 43 46H21L15 26Z" opacity=".55"/><path d="M32 32 32 14M32 32 49 26M32 32 43 46M32 32 21 46M32 32 15 26"/></g><circle cx="32" cy="32" r="6" fill="#FFB000"/><g fill="#29BEFD"><circle cx="32" cy="14" r="4"/><circle cx="49" cy="26" r="4"/><circle cx="43" cy="46" r="4"/><circle cx="21" cy="46" r="4"/><circle cx="15" cy="26" r="4"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FamilyMind AI">
+  <g fill="#c1d5a9">
+    <rect x="43.5" y="13.4" width="6.7" height="13.8" rx="1.6"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M32 8.5 7.7 29.8v23.5c0 3.8 3.1 6.9 6.9 6.9h34.8c3.8 0 6.9-3.1 6.9-6.9V29.8L32 8.5Zm-8.6 27.6a2.5 2.5 0 1 0 5 0 2.5 2.5 0 1 0-5 0Zm12.3 0a2.5 2.5 0 1 0 5 0 2.5 2.5 0 1 0-5 0ZM27.3 60.2V49.8a4.7 4.7 0 0 1 9.4 0v10.4h-9.4Z"/>
+  </g>
+</svg>

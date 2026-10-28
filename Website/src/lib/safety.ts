@@ -5,6 +5,7 @@ export interface SafetyCheck {
 }
 
 const CRISIS: RegExp[] = [
+  /انتحار|أقتل نفسي|اقتل نفسي|إيذاء النفس|ايذاء النفس|لا أستطيع التنفس|عنف منزلي|في خطر/,
   /\bsuicid/i,
   /\bkill (myself|himself|herself|themselves|me)\b/i,
   /\bend (my|his|her|their) life\b/i,
@@ -18,6 +19,7 @@ const CRISIS: RegExp[] = [
 ];
 
 const BOUNDARY: RegExp[] = [
+  /تشخيص|اكتئاب|اضطراب القلق|جرعة دواء|وصف دواء/,
   /\bdiagnos/i,
   /\b(depress(ed|ion)|anxiety disorder|bipolar|adhd|autis(m|tic)|ptsd)\b/i,
   /\b(prescri|dosage|dose of|medicine for)\b/i,

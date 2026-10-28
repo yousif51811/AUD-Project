@@ -1,0 +1,51 @@
+.language-control {position:relative;flex:none;}
+.language-toggle {font-family:Tahoma,Arial,sans-serif;font-weight:600;font-size:.8125rem;}
+.language-toggle span[lang='ar'] {font-size:1.25rem;line-height:1;}
+.language-tooltip {position:absolute;inset-block-start:calc(100% + 12px);inset-inline-end:0;z-index:60;border:1px solid var(--border);border-radius:9px;padding:9px 13px;background:var(--surface);color:var(--text);font-size:.75rem;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;box-shadow:var(--shadow-sm);}
+.language-control:not(.language-expanded):is(:hover,:focus-within) .language-tooltip {opacity:1;visibility:visible;}
+.menu-language {display:flex;align-items:center;justify-content:space-between;gap:20px;padding-block:0 18px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.auth-language {display:flex;justify-content:flex-end;margin-top:-7px;margin-bottom:16px;}
+.auth-language .btn {min-height:34px;font-size:.75rem;}
+:root[lang='ar'] {--font-body:Tahoma,'Arial',sans-serif;--font-display:Tahoma,'Arial',sans-serif;}
+[dir='rtl'] :is(h1,h2,h3,h4,.courtyard-eyebrow,.paper-label,.home-label,.auth-eyebrow) {letter-spacing:0;}
+[dir='rtl'] :is(h1,h2,h3) {line-height:1.5;}
+[dir='rtl'] :is(h1,h2,h3) em {font-style:normal;}
+[dir='rtl'] .family-brand,[dir='rtl'] .auth-wordmark {direction:ltr;font-family:Georgia,serif;letter-spacing:-.055em;}
+[dir='rtl'] .family-brand {flex-direction:row;}
+[dir='rtl'] :is(.btn,.family-text-link,.home-demo-link,.family-menu,.header-demo,.family-footer,.family-task-list,.assistant-starters,.about-page) .lucide-arrow-right {transform:scaleX(-1);}
+[dir='rtl'] .lucide-arrow-up-right {transform:scaleX(-1);}
+[dir='rtl'] .home-tool:hover .tool-link > svg {translate:-4px 0;}
+[dir='rtl'] :is(.assistant-starters button,.family-menu a,.daily-paper,.field,.assistant-composer textarea) {text-align:start;}
+[dir='rtl'] .home-hero h1 {font-size:clamp(2.8rem,4.6vw,4.7rem);}
+[dir='rtl'] .courtyard-welcome h1 {max-width:14ch;}
+[dir='rtl'] .home-assistant::before {left:auto;right:36px;}
+[dir='rtl'] .auth-modal > .modal-head {border-radius:23px 0 0 0;}
+[dir='rtl'] .auth-story {border-radius:0 23px 23px 0;}
+[dir='rtl'] .auth-modal > .modal-head > button {margin-inline-start:0;margin-inline-end:-12px;}
+[dir='rtl'] .auth-password input {padding-right:12px!important;padding-left:48px!important;}
+[dir='rtl'] .auth-password button {right:auto;left:3px;}
+[dir='rtl'] .appearance-tooltip {right:auto;left:0;}
+[dir='rtl'] .family-agenda time,[dir='rtl'] input:is([type='email'],[type='url'],[type='password'],[type='time'],[type='date']),[dir='rtl'] .context-preview,[dir='rtl'] code {direction:ltr;unicode-bidi:isolate;}
+[dir='rtl'] .family-task-list input {text-align:start;}
+[dir='rtl'] .about-hero h1 {font-size:clamp(2.8rem,4.6vw,4.4rem);}
+[dir='rtl'] .about-story blockquote p {font-style:normal;font-size:1.25rem;line-height:1.9;}
+[dir='rtl'] .about-team-grid h3 {font-family:var(--font-sans,Arial,sans-serif);}
+@media(max-width:1100px) and (min-width:801px) {.family-header-inner {gap:10px;padding-inline:20px;}.family-nav > a,.family-nav > button {padding-inline:10px;}.family-header .header-demo {padding-inline:12px;}}
+@media(max-width:560px) {.family-header-inner {gap:6px;padding-inline:14px;}.family-header .family-brand {font-size:1.35rem;gap:5px;}.family-header .brand-drawing {width:25px;}.family-header .header-demo {padding-inline:9px;font-size:.6875rem;gap:3px;}.family-header .header-demo > svg {display:none;}.family-header :is(.appearance-toggle,.family-mobile-menu) {width:34px;height:38px;min-width:34px;min-height:38px;}.family-header .header-demo {margin-inline-start:auto;margin-left:0;}.family-header .family-mobile-menu {margin-inline-start:0;}.auth-language {margin-top:0;}.language-tooltip {inset-inline-end:-20px;}[dir='rtl'] .home-hero h1 {font-size:2.8rem;}[dir='rtl'] .auth-story {border-radius:0;}[dir='rtl'] .auth-modal > .modal-head {border-radius:20px 20px 0 0;}[dir='rtl'] .home-assistant::before {right:24px;}}
+
+/* Fit the longest account label without clipping the menu at RTL's leading edge. */
+@media(max-width:560px) {
+  .family-header-inner {gap:4px;padding-inline:12px;}
+  .family-header .family-brand {font-size:1.2rem;gap:4px;}
+  .family-header .brand-drawing {width:22px;}
+  .family-header .header-demo {padding-inline:8px;}
+  .pref-large-text .family-header .brand-drawing {display:none;}
+}
+[dir='rtl'] .assistant-question {margin-left:0;margin-right:auto;border-radius:16px 16px 16px 3px;}
+[dir='rtl'] .day-pulse > a,[dir='rtl'] .family-filters > summary > span {margin-left:0;margin-right:auto;}
+[dir='rtl'] .family-plan-summary > button {margin-left:0;margin-right:auto;}
+[dir='rtl'] .household-mode {margin-left:0;margin-right:auto;}
+[dir='rtl'] .paper-task {text-align:start;}
+[dir='rtl'] .modal h2 {font-family:var(--font-display);}
+@media(max-width:800px) {[dir='rtl'] .family-nav {margin-left:0;margin-right:auto;}}
+@media(max-width:560px) {[dir='rtl'] .day-pulse > a,[dir='rtl'] .family-plan-summary > button {margin-right:0;}}

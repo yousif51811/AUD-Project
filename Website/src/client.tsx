@@ -28,6 +28,11 @@ import { ToastProvider } from '@/components/shared/Toast';
 import { ErrorBoundary } from '@/components/shared/ErrorState';
 import { AppShell, SiteLayout } from '@/components/layout/Layouts';
 import { LoadingPage } from '@/components/shared/Loading';
+import { AuthDialog, authBackground } from '@/components/family/AuthDialog';
+import './styles/atelier.css';
+import './styles/language.css';
+import './styles/about.css';
+import { LanguageEffects } from '@/components/family/LanguageControl';
 
 const Onboarding = lazy(() => import('@/screens/Onboarding'));
 const Assessment = lazy(() => import('@/screens/Assessment'));
@@ -37,25 +42,27 @@ const Schedule = lazy(() => import('@/screens/Schedule'));
 const Student = lazy(() => import('@/screens/Student'));
 const Care = lazy(() => import('@/screens/Care'));
 const Memories = lazy(() => import('@/screens/Memories'));
+const About = lazy(() => import('@/screens/About'));
 const Trust = lazy(() => import('@/screens/Trust'));
 const Demo = lazy(() => import('@/screens/Demo'));
 const NotFound = lazy(() => import('@/screens/NotFound'));
 
 function RoutedApp() {
-  const { pathname } = useLocation();
+  const location = useLocation(), { pathname } = location;
+  const authentication = ['/sign-in', '/sign-up'].includes(pathname);
   return (
     <ErrorBoundary resetKey={pathname}>
       <Suspense fallback={<LoadingPage />}>
-        <Routes>
+        <div inert={authentication || undefined} aria-hidden={authentication || undefined}>
+        <Routes location={authentication ? authBackground(location) : location}>
           <Route element={<SiteLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/assessment" element={<AccountGate><Assessment /></AccountGate>} />
+            <Route path="/about" element={<About />} />
             <Route path="/trust" element={<Trust />} />
             <Route path="/demo" element={<DemoEntry />} />
             <Route path="/tour" element={<Demo />} />
-            <Route path="/sign-in" element={<Account />} />
-            <Route path="/sign-up" element={<Account />} />
             <Route path="/account" element={<Account />} />
             <Route path="/invitations/:token" element={<Account />} />
             <Route path="/home" element={<Navigate to="/" replace />} />
@@ -77,11 +84,13 @@ function RoutedApp() {
             <Route path="/memories" element={<Memories />} />
           </Route>
         </Routes>
+        </div>
+        {authentication && <AuthDialog/>}
       </Suspense>
     </ErrorBoundary>
   );
 }
 
 export default function FamilyMindClient() {
- return <StrictMode><ErrorBoundary><BrowserRouter><WorkspaceProvider><AppProvider><AIConnectionsProvider><ToastProvider><RoutedApp /></ToastProvider></AIConnectionsProvider></AppProvider></WorkspaceProvider></BrowserRouter></ErrorBoundary></StrictMode>;
+ return <StrictMode><ErrorBoundary><BrowserRouter><WorkspaceProvider><AppProvider><AIConnectionsProvider><ToastProvider><LanguageEffects /><RoutedApp /></ToastProvider></AIConnectionsProvider></AppProvider></WorkspaceProvider></BrowserRouter></ErrorBoundary></StrictMode>;
 }

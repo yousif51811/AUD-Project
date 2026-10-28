@@ -176,6 +176,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const lastPersisted = useRef('');
   const syncing = useRef(false);
   const baseline = useRef<AppState>(state);
+  const resetSample = useRef(false);
   const epoch = useRef(0);
   const [undo, setUndo] = useState<ScheduleSnapshot[]>([]);
   const storageOk = useMemo(() => storageAvailable(), []);
@@ -184,7 +185,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     epoch.current++; syncing.current=false;
     let next=emptyState();
     if(workspace.mode==='demo'){
-      try { const saved=sessionStorage.getItem('familymind:demo:v2');next=saved?JSON.parse(saved):demoState(); }catch{next=demoState();}
+      if (resetSample.current) { next = demoState(); resetSample.current = false; }
+      else try { const saved=sessionStorage.getItem('familymind:demo:v2');next=saved?JSON.parse(saved):demoState(); }catch{next=demoState();}
     }
     baseline.current=next;lastPersisted.current=canonical(next);setUndo([]);setState(next);
   }, [workspace.generation,workspace.mode]);
@@ -271,7 +273,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       today,
       canUndoSchedule: undo.length > 0,
       storageOk,
-      restoreDemo: () => { workspace.enterDemo(); setUndo([]); setState(demoState()); },
+      restoreDemo: () => {
+        const fresh = demoState(); resetSample.current = true;
+        try { sessionStorage.setItem('familymind:demo:v2', JSON.stringify(fresh)); sessionStorage.setItem('familymind:walkthrough', 'done'); } catch { /* use the in-memory reset below */ }
+        window.dispatchEvent(new Event('familymind:reset-demo'));
+        workspace.enterDemo('omar'); setUndo([]); setState(fresh);
+      },
       clearData: () => { setUndo([]); setState(emptyState()); },
       completeOnboarding: (p) => { setUndo([]); setState((s) => completeHousehold(s, p)); },
       updateProfile: (fn) => setState((s) => (s.profile ? { ...s, profile: fn(s.profile) } : s)),

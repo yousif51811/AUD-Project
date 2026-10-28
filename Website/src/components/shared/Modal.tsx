@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { t, useLanguage } from '@/i18n';
+import { useLayoutEffect, useId, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 let lockCount = 0;
@@ -11,7 +12,7 @@ function unlockScroll() {
   if (lockCount === 0) document.documentElement.style.overflow = '';
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const FOCUSABLE = 'a[href], button:not([disabled]):not([tabindex="-1"]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
 interface Props {
   open: boolean;
@@ -23,19 +24,22 @@ interface Props {
   description?: string;
   /** Alert-style dialog for destructive confirmations */
   alert?: boolean;
+  className?: string;
+  returnFocus?: HTMLElement | null;
 }
 
 /** Accessible modal dialog with focus trap, Escape to close and focus restoration. */
-export function Modal({ open, title, onClose, children, footer, wide, description, alert }: Props) {
+export function Modal({ open, title, onClose, children, footer, wide, description, alert, className, returnFocus }: Props) {
+  useLanguage();
   const ref = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descId = useId();
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
-    const previous = document.activeElement as HTMLElement | null;
+    const previous = returnFocus ?? (document.activeElement as HTMLElement | null);
     lockScroll();
     const node = ref.current;
     const first = node?.querySelector<HTMLElement>('[data-autofocus]') ?? node?.querySelector<HTMLElement>(FOCUSABLE);
@@ -59,7 +63,12 @@ export function Modal({ open, title, onClose, children, footer, wide, descriptio
     return () => {
       document.removeEventListener('keydown', onKey, true);
       unlockScroll();
-      if (previous && document.contains(previous)) previous.focus();
+      // Layout cleanup precedes removal of the auth backdrop's inert attribute.
+      // Restore after that commit, without stealing focus from a replacement dialog.
+      queueMicrotask(() => {
+        const dialog = document.querySelector('[aria-modal="true"]');
+        if (previous && document.contains(previous) && !previous.closest('[inert]') && (!dialog || dialog.contains(previous))) previous.focus();
+      });
     };
   }, [open]);
 
@@ -68,7 +77,7 @@ export function Modal({ open, title, onClose, children, footer, wide, descriptio
     <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div
         ref={ref}
-        className={`modal${wide ? ' modal-wide' : ''}`}
+        className={`modal${wide ? ' modal-wide' : ''}${className ? ' ' + className : ''}`}
         role={alert ? 'alertdialog' : 'dialog'}
         aria-modal="true"
         aria-labelledby={titleId}
@@ -77,10 +86,10 @@ export function Modal({ open, title, onClose, children, footer, wide, descriptio
       >
         <div className="modal-head">
           <div className="stack stack-sm">
-            <h2 id={titleId} style={{ fontSize: 'var(--fs-xl)' }}>{title}</h2>
-            {description && <p id={descId} className="muted small">{description}</p>}
+            <h2 id={titleId} style={{ fontSize: 'var(--fs-xl)' }}>{typeof title === 'string' ? t(title) : title}</h2>
+            {description && <p id={descId} className="muted small">{t(description)}</p>}
           </div>
-          <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label="Close dialog"><X size={20} aria-hidden /></button>
+          <button type="button" className="btn btn-ghost btn-icon" onClick={onClose} aria-label={t("Close dialog")}><X size={20} aria-hidden /></button>
         </div>
         <div className="modal-body">{children}</div>
         {footer && <div className="modal-foot">{footer}</div>}
