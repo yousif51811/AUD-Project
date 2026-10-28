@@ -1,3 +1,15 @@
+# Verification — direct assistant sending and inline policies
+
+28 October 2026: removed the per-message request modal in favor of an English/Arabic inline provider terms/privacy notice and request-route disclosure. Author approval for AI-enabled records and confirmation before planner changes remain in place.
+
+The first focused production-browser run passed all 34 scenarios: direct Send/Enter, no inference before sending, policy links for shared/personal providers, retained drafts on missing setup/quota/malformed output/cancellation, ignored late responses, action confirmation, sample resets, encrypted remembered credentials, and contrast checks. The notice was checked at 360/768/1440 pixels in both themes and languages. Visual inspection then caught an untranslated Arabic prefix caused by whitespace-normalized translation lookup; the dictionary key and browser assertion were corrected for the final rerun.
+
+The final production rerun passed all 23 shared-assistant, responsive-policy and contrast scenarios, including the corrected Arabic copy. All 34 distinct focused browser scenarios passed across the two runs. 166 unit tests, type checking, lint and the final production build passed. Live inference is mocked in browser checks; provider answer quality remains unverified. No dependency, database, deployment, commit or push changes.
+
+After completing the assistant checks, the user authorized a hosted Google redirect inspection. Google’s error-details dialog confirmed `redirect_uri=http://localhost:3000/api/auth/callback/google`. No Google account was signed in. The required hosted correction is `APP_URL=https://familymind.onrender.com`, followed by a service restart; this external configuration was not changed.
+
+---
+
 # Verification — final-demo reliability, shared Gemini and device language
 
 Verified 28 October 2026 using the current local production build, fictional data and disposable accounts in an isolated local database.

@@ -4,19 +4,28 @@ import { Link } from 'react-router-dom';
 import { useApp } from '@/state/store';
 import { useWorkspace } from '@/workspace/Workspace';
 import { providerAnswer, cancelAIRequests } from '@/lib/model/engine';
-import { PROVIDERS, providerIds, type AIConnection } from '@/lib/model/providers';
+import { PROVIDERS, PROVIDER_POLICIES, providerIds, type AIConnection } from '@/lib/model/providers';
 import { serverAnswer } from '@/lib/model/server-client';
 import { SERVER_AI_NAME, serverRequestSchema, type AISelection, type ServerAIRequest } from '@/lib/model/server-contract';
 import { canonical } from '@/lib/canonical';
 import { useAIConnections } from './AIConnections';
 import { boundedFacts, contextFor, exactAnswer, parseAnswer, systemPrompt, type AssistantAnswer } from '@/lib/model/assistant';
 import { uid } from '@/lib/sanitize';
-import { Modal } from '@/components/shared/Modal';
 import { DAY_NAMES } from '@/lib/time';
 import { ArrowUp, ArrowUpRight, CalendarClock, CircleHelp, HeartHandshake, Leaf, ListChecks, LockKeyhole, RotateCcw, SlidersHorizontal } from 'lucide-react';
 const starters = ["Who's responsible for today's tasks?", "Who's free right now?", "Who's open to talk?", 'How could we make this week easier?'];
 const selectionName = (selection: AISelection) => selection === 'server' ? t(SERVER_AI_NAME) : PROVIDERS[selection].name;
 const starterIcons = [ListChecks, CalendarClock, HeartHandshake, Leaf];
+interface AssistantRequest {
+    question: string;
+    system: string;
+    connection?: AIConnection;
+    selection: AISelection;
+    model: string;
+    facts: ServerAIRequest["facts"];
+    memberIds: string[];
+    recordIds: string[];
+}
 interface Message {
     id: string;
     question: string;
@@ -27,48 +36,40 @@ interface Message {
 export function FamilyAssistant() {
   const { language } = useLanguage();
     const app = useApp(), w = useWorkspace(), ai = useAIConnections();
-    const [input, setInput] = useState(''), [messages, setMessages] = useState<Message[]>([]), [busy, setBusy] = useState(false), [status, setStatus] = useState(''), [error, setError] = useState(''), [consent, setConsent] = useState<{
-        question: string;
-        system: string;
-        connection?: AIConnection;
-        selection: AISelection;
-        model: string;
-        facts: ServerAIRequest["facts"];
-        memberIds: string[];
-        recordIds: string[];
-    } | null>(null);
+    const [input, setInput] = useState(''), [messages, setMessages] = useState<Message[]>([]), [busy, setBusy] = useState(false), [status, setStatus] = useState(''), [error, setError] = useState('');
     const controller = useRef<AbortController | null>(null), generation = useRef(0);
     const log = useRef<HTMLDivElement>(null);
     useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.length, busy]);
-    useEffect(() => { const clear = () => { generation.current++; controller.current?.abort(); cancelAIRequests(); setMessages([]); setBusy(false); setConsent(null); }; window.addEventListener('familymind:clear-ai', clear); return () => { clear(); window.removeEventListener('familymind:clear-ai', clear); }; }, []);
+    useEffect(() => { const clear = () => { generation.current++; controller.current?.abort(); cancelAIRequests(); setMessages([]); setBusy(false); }; window.addEventListener('familymind:clear-ai', clear); return () => { clear(); window.removeEventListener('familymind:clear-ai', clear); }; }, []);
     const facts = () => serverRequestSchema.shape.facts.parse(boundedFacts(w.mode === 'demo' ? [{ id: 'sample-profile', kind: 'profile', data: app.profile ?? {} }, { id: 'sample-plan', kind: 'plan', data: app.plan ?? {} }, { id: 'sample-calendar', kind: 'calendar', data: {events:app.schedule} }] : contextFor(w.records, true, w.actorId, w.members.filter(m=>m.status==='ACTIVE').map(m=>m.userId))));
     const active = ai.selected === 'server' ? undefined : ai.connections[ai.selected];
     const connectionSignature = ai.selected === 'server' ? `${ai.server?.model}:${ai.server?.available}` : active ? `${active.provider}:${active.model}:${active.verifiedAt}` : '';
     const memberIds = () => app.profile?.members.map(member => member.id) ?? [];
+    const policy = PROVIDER_POLICIES[ai.selected === 'server' ? 'gemini' : ai.selected];
     const connected = ai.selected === 'server' ? !!ai.server?.available : !!active;
     useEffect(() => {
-        generation.current++; controller.current?.abort(); setBusy(false); setStatus(''); setConsent(null);
+        generation.current++; controller.current?.abort(); setBusy(false); setStatus('');
     }, [ai.selected, connectionSignature, language]);
-    const perform = async (preview: NonNullable<typeof consent>) => {
+    const perform = async (requestContext: AssistantRequest) => {
         let changed = true;
-        try { changed = systemPrompt(facts(), language) !== preview.system || canonical(memberIds()) !== canonical(preview.memberIds) || ai.selected !== preview.selection || (preview.selection === 'server' ? !ai.server?.available || ai.server.model !== preview.model : ai.connections[preview.selection]?.apiKey !== preview.connection?.apiKey); }
-        catch { /* Invalid or changed context must be reviewed again. */ }
-        if (changed) { setError('Your records or AI connection changed. Review a new request preview before sending.'); return; }
+        try { changed = systemPrompt(facts(), language) !== requestContext.system || canonical(memberIds()) !== canonical(requestContext.memberIds) || ai.selected !== requestContext.selection || (requestContext.selection === 'server' ? !ai.server?.available || ai.server.model !== requestContext.model : ai.connections[requestContext.selection]?.apiKey !== requestContext.connection?.apiKey); }
+        catch { /* Do not send stale or invalid context. */ }
+        if (changed) { setError('Your records or AI connection changed. Please send your question again.'); return; }
         const request = ++generation.current;
         setBusy(true); setError(''); controller.current = new AbortController();
         try {
-            setStatus(t('Waiting for {provider}… Your planner remains available.', {provider: selectionName(preview.selection)}));
-            const text = preview.selection === 'server'
-              ? JSON.stringify(await serverAnswer({question:preview.question,language,facts:preview.facts,memberIds:preview.memberIds}, controller.current.signal))
-              : await providerAnswer(preview.connection!, preview.system, preview.question, controller.current.signal);
+            setStatus(t('Waiting for {provider}… Your planner remains available.', {provider: selectionName(requestContext.selection)}));
+            const text = requestContext.selection === 'server'
+              ? JSON.stringify(await serverAnswer({question:requestContext.question,language,facts:requestContext.facts,memberIds:requestContext.memberIds}, controller.current.signal))
+              : await providerAnswer(requestContext.connection!, requestContext.system, requestContext.question, controller.current.signal);
             if (request !== generation.current) return;
             let result: AssistantAnswer;
-            try { result = parseAnswer(text, preview.memberIds, preview.recordIds); }
+            try { result = parseAnswer(text, requestContext.memberIds, requestContext.recordIds); }
             catch { throw new Error('The assistant returned an invalid suggestion. Nothing was changed. Try again or choose another model.'); }
-            setInput(current => current.trim() === preview.question ? '' : current);
-            const source = t('Cloud AI · {provider}', {provider: selectionName(preview.selection)});
-            setMessages(xs => [...xs, { id: uid('chat'), question: preview.question, result, source }].slice(-20));
-            if (w.mode === 'account') await w.save('chat', crypto.randomUUID(), { question: preview.question, answer: result.answer, source: preview.selection, createdAt: new Date().toISOString() });
+            setInput(current => current.trim() === requestContext.question ? '' : current);
+            const source = t('Cloud AI · {provider}', {provider: selectionName(requestContext.selection)});
+            setMessages(xs => [...xs, { id: uid('chat'), question: requestContext.question, result, source }].slice(-20));
+            if (w.mode === 'account') await w.save('chat', crypto.randomUUID(), { question: requestContext.question, answer: result.answer, source: requestContext.selection, createdAt: new Date().toISOString() });
         } catch (e) {
             if (request === generation.current && (e as Error).name !== 'AbortError') setError((e as Error).message || 'The assistant could not produce a valid answer. Nothing was changed.');
         } finally { if (request === generation.current) { setBusy(false); setStatus(''); } }
@@ -94,7 +95,7 @@ export function FamilyAssistant() {
         }
         try {
         const records = facts();
-        setConsent({ question, system: systemPrompt(records, language), selection:ai.selected, model:ai.selected === 'server' ? ai.server!.model : active!.model, connection: active ? {...active} : undefined, facts:records, memberIds:memberIds(), recordIds: records.map(r => r.id) });
+        void perform({ question, system: systemPrompt(records, language), selection:ai.selected, model:ai.selected === 'server' ? ai.server!.model : active!.model, connection: active ? {...active} : undefined, facts:records, memberIds:memberIds(), recordIds: records.map(r => r.id) });
         } catch { setError('This assistant context could not be prepared. Nothing was sent. Try reloading the sample.'); }
     };
     const apply = (m: Message) => { setError(''); const errors = app.addQuickActions(m.result.actions.map(a => ({ ...a, day: a.day as import('@/types').DayIndex, id: uid('action'), done: false, source: 'coach' as const }))); if (errors.length) {
@@ -122,15 +123,16 @@ export function FamilyAssistant() {
       </div>}
       <form className="assistant-composer" onSubmit={e => { e.preventDefault(); send(input); }}>
         <label className="sr-only" htmlFor="home-assistant-input">{t("Ask about your week")}</label>
-        <textarea id="home-assistant-input" value={input} onChange={e => setInput(e.target.value)} placeholder={t("A busy week? Let’s work it out together…")} maxLength={1000} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); } }}/>
+        <textarea aria-describedby="assistant-policy" id="home-assistant-input" value={input} onChange={e => setInput(e.target.value)} placeholder={t("A busy week? Let’s work it out together…")} maxLength={1000} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send(input); } }}/>
         <button className="assistant-send" disabled={!input.trim() || busy} aria-label={t("Ask the assistant")}><ArrowUp size={23} aria-hidden/></button>
       </form>
+      <p id="assistant-policy" className="assistant-policy hint">{t('By sending a message to this assistant, you agree to ')}<a href={policy.termsUrl} target="_blank" rel="noopener noreferrer">{t('{provider} Terms of Service', {provider: policy.name})}</a>{t(' and ')}<a href={policy.privacyUrl} target="_blank" rel="noopener noreferrer">{t('Privacy Policy')}</a>{'. '}<span>{t(ai.selected === 'server' ? 'Your message and AI-enabled records go through FamilyMind’s backend to Google.' : ai.selected === 'openrouter' ? 'Your message and AI-enabled records go directly to OpenRouter and its model host.' : 'Your message and AI-enabled records go directly to your selected provider.')}</span></p>
       <div className="assistant-starters" aria-label={t("Suggested questions")}>{starters.map((text, i) => { const Icon = starterIcons[i]; return <button type="button" key={text} disabled={busy} onClick={() => send(t(text))}><span aria-hidden className="starter-icon" data-tone={i}><Icon size={16}/></span><span className="starter-label">{t(text)}</span><ArrowUpRight size={14} aria-hidden/></button>; })}</div>
       <div className="assistant-toolbar">
-        <label className="assistant-mode"><span className="mode-dot" aria-hidden/><span className="sr-only">{t("Answer with")}</span><select value={ai.selected} onChange={e => ai.select(e.target.value as AISelection)} disabled={busy || !ai.ready || consent !== null}><option value="server">{t(SERVER_AI_NAME)}{t(ai.server?.available ? ' · available' : ' · unavailable')}</option>{providerIds.map(id => <option key={id} value={id}>{PROVIDERS[id].name}{ai.connections[id] ? t(" · connected") : t(" · connect")}</option>)}</select></label>
+        <label className="assistant-mode"><span className="mode-dot" aria-hidden/><span className="sr-only">{t("Answer with")}</span><select value={ai.selected} onChange={e => ai.select(e.target.value as AISelection)} disabled={busy || !ai.ready}><option value="server">{t(SERVER_AI_NAME)}{t(ai.server?.available ? ' · available' : ' · unavailable')}</option>{providerIds.map(id => <option key={id} value={id}>{PROVIDERS[id].name}{ai.connections[id] ? t(" · connected") : t(" · connect")}</option>)}</select></label>
         <div className="assistant-toolbar-links">{messages.length > 0 && <button type="button" onClick={() => { generation.current++; controller.current?.abort(); cancelAIRequests(); setMessages([]); setBusy(false); setError(''); setStatus(''); }} aria-label={t("Clear conversation")}><RotateCcw size={13}/><span>{t("Clear")}</span></button>}<Link to="/settings#ai-settings"><SlidersHorizontal size={13}/><span>{connected ? t("AI settings") : t("Connect AI")}</span></Link></div>
       </div>
       <details className="assistant-disclosure"><summary><CircleHelp size={12} aria-hidden/>{t("How answers & privacy work")}</summary><p>{t("Exact questions use labelled built-in tools and recorded facts on your device. Shared Gemini sends approved context through FamilyMind’s backend to Google. Personal providers receive approved requests directly from your browser. No suggestion changes your plan without confirmation. This is not a medical service and never infers anyone’s feelings.")}</p></details>
-      <Modal open={consent !== null} title={t("Review what leaves this device")} onClose={() => setConsent(null)}><p>{t("This question and the approved records below will be readable by ")}{consent ? consent.selection === 'server' ? 'Google Gemini' : selectionName(consent.selection) : t("your provider")}{consent?.selection === 'openrouter' ? t(" and its selected model host") : ''}{consent?.selection === 'server' ? t('. FamilyMind’s backend also receives this readable request temporarily and forwards it to Google. It is not saved in server logs or readable database records.') : t('. This personal-provider request goes directly from your browser; FamilyMind’s backend does not handle it.')}</p><p className="hint">{t("Model: ")}{consent?.model}{t(". Previous chat messages are excluded. You decide whether to send this request.")}</p><pre className="context-preview">{consent?.question}{'\n\n'}{consent?.system}{consent?.selection === 'server' ? '\n\n' + t('Included member identifiers: ') + consent.memberIds.join(', ') : ''}</pre><button className="btn btn-primary" onClick={() => { const preview = consent!; setConsent(null); void perform(preview); }}>{t("Send this request to ")}{consent ? consent.selection === 'server' ? 'Google Gemini' : selectionName(consent.selection) : t("provider")}</button></Modal>
+
     </section>;
 }

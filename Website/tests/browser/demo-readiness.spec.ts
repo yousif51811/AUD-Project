@@ -3,14 +3,15 @@ const response={answer:'A synthetic shared suggestion.',sources:['sample-profile
 async function configured(page:Page){await page.route('**/api/ai/config',route=>route.fulfill({json:{available:true,model:'gemini-3.5-flash-lite'}}));}
 async function ask(page:Page,question='Help us make the afternoon calmer'){
  await page.getByLabel('Ask about your week',{exact:true}).fill(question);await page.getByRole('button',{name:'Ask the assistant',exact:true}).click();
- await expect(page.getByRole('dialog',{name:'Review what leaves this device'})).toBeVisible();
 }
-test('shared Gemini is default, previews its server boundary and requires action confirmation',async({page})=>{
+test('shared Gemini sends directly with policy links and requires action confirmation',async({page})=>{
  await configured(page);const calls:Record<string,unknown>[]=[];await page.route('**/api/ai/answer',route=>{calls.push(route.request().postDataJSON());return route.fulfill({json:response});});
  await page.goto('/dashboard');await expect(page.getByLabel('Answer with')).toHaveValue('server');await expect(page.getByLabel('Answer with')).toContainText('Server-side · Gemini · available');expect(calls).toHaveLength(0);
- await ask(page);const dialog=page.getByRole('dialog');await expect(dialog).toContainText('backend also receives this readable request');expect(calls).toHaveLength(0);
- await dialog.getByRole('button',{name:'Close dialog'}).click();await expect(page.getByLabel('Ask about your week')).toHaveValue('Help us make the afternoon calmer');expect(calls).toHaveLength(0);
- await ask(page);await page.getByRole('button',{name:'Send this request to Google Gemini',exact:true}).click();await expect(page.getByText(response.answer,{exact:true})).toBeVisible();
+ await expect(page.locator('#assistant-policy')).toContainText('through FamilyMind’s backend to Google');
+ await expect(page.locator('#assistant-policy').getByRole('link',{name:'Google Gemini Terms of Service'})).toHaveAttribute('href','https://ai.google.dev/gemini-api/terms');
+ await expect(page.locator('#assistant-policy').getByRole('link',{name:'Privacy Policy'})).toHaveAttribute('href','https://policies.google.com/privacy');
+ await page.getByLabel('Ask about your week').fill('Help us make the afternoon calmer');expect(calls).toHaveLength(0);
+ await page.getByLabel('Ask about your week').press('Enter');await expect(page.getByText(response.answer,{exact:true})).toBeVisible();await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(calls).toHaveLength(1);expect(Object.keys(calls[0]).sort()).toEqual(['facts','language','memberIds','question']);expect(JSON.stringify(calls)).not.toMatch(/apiKey|systemInstruction|endpoint/);
  await expect(page.getByLabel('Ask about your week')).toHaveValue('');await expect(page.locator('.family-task-list')).not.toContainText(response.actions[0].title);
  await page.getByRole('button',{name:'Confirm these actions',exact:true}).click();await expect(page.locator('.family-task-list')).toContainText(response.actions[0].title);
@@ -24,12 +25,12 @@ test('quota and malformed shared answers retain the question without fallback or
  await configured(page);let calls=0;await page.route('**/api/ai/answer',route=>{calls++;return calls===1?route.fulfill({status:429,json:{message:'DO_NOT_DISPLAY'}}):route.fulfill({json:{...response,actions:[{...response.actions[0],participantIds:['unknown']}]}});});
  const external:string[]=[];page.on('request',r=>{if(/generativelanguage.googleapis.com|api.groq.com|openrouter.ai\/api/.test(r.url()))external.push(r.url());});
  await page.goto('/dashboard');await expect(page.getByLabel('Answer with')).toContainText(' · available');const original=await page.locator('.family-task-list').innerText();
- for(let i=0;i<2;i++){await ask(page);await page.getByRole('button',{name:'Send this request to Google Gemini'}).click();await expect(page.locator('.home-assistant [role=alert]')).toBeVisible();await expect(page.getByLabel('Ask about your week')).toHaveValue('Help us make the afternoon calmer');expect(await page.locator('.family-task-list').innerText()).toBe(original);}
+ for(let i=0;i<2;i++){await ask(page);await expect(page.locator('.home-assistant [role=alert]')).toBeVisible();await expect(page.getByLabel('Ask about your week')).toHaveValue('Help us make the afternoon calmer');expect(await page.locator('.family-task-list').innerText()).toBe(original);}
  expect(calls).toBe(2);expect(external).toEqual([]);await expect(page.locator('.home-assistant')).not.toContainText('DO_NOT_DISPLAY');
 });
 test('cancellation retains a shared question and ignores a late answer',async({page})=>{
  await configured(page);let release:()=>void=()=>{};await page.route('**/api/ai/answer',async route=>{await new Promise<void>(resolve=>{release=resolve;});await route.fulfill({json:response}).catch(()=>{});});
- await page.goto('/dashboard');await expect(page.getByLabel('Answer with')).toContainText(' · available');await ask(page);await page.getByRole('button',{name:'Send this request to Google Gemini'}).click();await expect(page.getByRole('button',{name:'Cancel',exact:true})).toBeVisible();await page.getByRole('button',{name:'Cancel',exact:true}).click();release();
+ await page.goto('/dashboard');await expect(page.getByLabel('Answer with')).toContainText(' · available');await ask(page);await expect(page.getByRole('button',{name:'Cancel',exact:true})).toBeVisible();await page.getByRole('button',{name:'Cancel',exact:true}).click();release();
  await expect(page.getByLabel('Ask about your week')).toHaveValue('Help us make the afternoon calmer');await expect(page.getByText(response.answer,{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'Confirm these actions'})).toHaveCount(0);
 });
 for(const blocked of [false,true])test(`walkthrough and sample reset restore fresh data, session storage blocked=${blocked}`,async({page})=>{
@@ -49,4 +50,15 @@ test('Arabic device language is automatic, Settings overrides survive reload and
  await page.getByLabel('لغة الموقع',{exact:true}).selectOption('en');await expect(page.locator('html')).toHaveAttribute('lang','en');await page.reload();await expect(page.getByLabel('Website language',{exact:true})).toHaveValue('en');
  await page.getByLabel('Website language',{exact:true}).selectOption('system');await expect(page.locator('html')).toHaveAttribute('lang','ar');await page.reload();await expect(page.getByLabel('لغة الموقع',{exact:true})).toHaveValue('system');
  }finally{await context.close();}
+});
+
+for (const width of [360,768,1440]) for (const theme of ['light','dark'] as const) for (const language of ['en','ar']) test(`assistant inline policy ${width} ${theme} ${language}`,async({page})=>{
+ await page.setViewportSize({width,height:1000});await page.emulateMedia({colorScheme:theme,reducedMotion:'reduce'});
+ await page.addInitScript(language=>localStorage.setItem('familymind:language:v1',language),language);
+ await configured(page);await page.goto('/dashboard');const policy=page.locator('#assistant-policy');await expect(policy).toBeVisible();await expect(policy.getByRole('link')).toHaveCount(2);if(language==='ar'){await expect(policy).not.toContainText('By sending');await expect(policy).not.toContainText(' and ');}
+ for(const [value,url] of [['groq','https://console.groq.com/docs/legal/services-agreement'],['gemini','https://ai.google.dev/gemini-api/terms'],['openrouter','https://openrouter.ai/terms'],['server','https://ai.google.dev/gemini-api/terms']]){
+  await page.getByRole('combobox').filter({has:page.locator('option[value="server"]')}).selectOption(value);await expect(policy.getByRole('link').first()).toHaveAttribute('href',url);
+ }
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)).toBe(false);
+ await policy.screenshot({path:`/tmp/familymind-policy-${width}-${theme}-${language}.png`});
 });

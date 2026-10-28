@@ -1,3 +1,11 @@
+# Assistant: send directly with an inline provider notice
+
+- Removed the per-message request-preview modal. Send and Enter now submit directly, while built-in questions remain local.
+- Added bilingual provider-specific terms/privacy links and a readable request-route notice beneath the composer. Shared Gemini identifies FamilyMind and Google; OpenRouter identifies its model host too.
+- Kept author opt-in for AI context, draft retention on errors/cancellation, response validation and confirmation before planner changes. Updated privacy/settings guidance and browser regressions.
+
+---
+
 # Final-demo reliability and shared Gemini
 
 - Added default server-side Gemini for accounts and the fictional sample, with a server-only key, explicit request preview, sanitized errors, cancellation and atomic per-caller/global request caps. Personal Groq/Gemini/OpenRouter keys retain their browser-only storage. Restoring remembered keys does not override the shared default.

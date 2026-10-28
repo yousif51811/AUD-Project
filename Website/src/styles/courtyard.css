@@ -278,3 +278,6 @@
 @media print {
   .living-backdrop,.courtyard-welcome-art,.home-assistant,.garden-motion {display:none;}
 }
+
+.assistant-policy {margin-block:10px 14px;font-size:.75rem;line-height:1.6;overflow-wrap:anywhere;}
+.assistant-policy a {text-decoration:underline;text-underline-offset:3px;}

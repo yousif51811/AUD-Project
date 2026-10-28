@@ -37,3 +37,10 @@ export function validateDraft(draft: ConnectionDraft): ConnectionDraft {
   if (value.data.provider === 'gemini' && !/^gemini-[a-zA-Z0-9._-]+$/.test(value.data.model)) throw new Error('Use a Gemini model ID, such as gemini-3.5-flash-lite.');
   return value.data;
 }
+
+/** Policies for the API services used by each connection, including shared Gemini. */
+export const PROVIDER_POLICIES = {
+  groq: { name: 'Groq', termsUrl: 'https://console.groq.com/docs/legal/services-agreement', privacyUrl: 'https://groq.com/privacy-policy' },
+  gemini: { name: 'Google Gemini', termsUrl: 'https://ai.google.dev/gemini-api/terms', privacyUrl: 'https://policies.google.com/privacy' },
+  openrouter: { name: 'OpenRouter', termsUrl: 'https://openrouter.ai/terms', privacyUrl: 'https://openrouter.ai/privacy' },
+} satisfies Record<ProviderId, {name: string; termsUrl: string; privacyUrl: string}>;

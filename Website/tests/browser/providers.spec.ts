@@ -31,7 +31,7 @@ test.beforeEach(async () => {
   const db = new PrismaClient(); try { await db.rateLimit.deleteMany(); } finally { await db.$disconnect(); }
 });
 
-test('all three provider setup flows work without WebGPU, preview each request and never send keys to the backend', async ({ page }) => {
+test('all three provider setup flows work without WebGPU, show inline provider policies and never send keys to the backend', async ({ page }) => {
   test.setTimeout(120000);
   await page.addInitScript(() => Object.defineProperty(navigator, 'gpu', { value: undefined, configurable: true }));
   const { calls, backend } = await mockProviders(page);
@@ -41,11 +41,11 @@ test('all three provider setup flows work without WebGPU, preview each request a
     expect(calls.at(-1)?.test).toBe(true); expect(calls.at(-1)?.body).not.toContain('Al Noor');
     // Use client navigation: demo credentials intentionally do not survive a reload.
     await page.getByRole('link', { name: 'Go to your assistant', exact: true }).click();
-    await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
-    const before = calls.length; await expect(page.getByRole('dialog')).toContainText(name);
-    await page.getByRole('button', { name: 'Close dialog', exact: true }).click(); expect(calls).toHaveLength(before);
-    await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
-    await page.getByRole('button', { name: 'Send this request to ' + name, exact: true }).click();
+    const before = calls.length;
+    await expect(page.locator('#assistant-policy')).toContainText(name === 'Gemini' ? 'Google Gemini Terms of Service' : name + ' Terms of Service');
+    await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); expect(calls).toHaveLength(before);
+    await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByText('Cloud AI · ' + name, { exact: true })).toBeVisible(); expect(calls).toHaveLength(before + 1);
     expect(calls.at(-1)?.test).toBe(false);
     const storage = await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage })); expect(storage).not.toContain(key(id));
@@ -59,11 +59,11 @@ test('all three provider setup flows work without WebGPU, preview each request a
 test('provider proposals require confirmation and a quota failure never switches providers', async ({ page }) => {
   test.setTimeout(60000); const mocked = await mockProviders(page, { action: true });
   await page.goto('/settings'); await connect(page, 'groq', 'Groq'); await page.getByRole('link', { name: 'Go to your assistant', exact: true }).click();
-  await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click(); await page.getByRole('button', { name: 'Send this request to Groq', exact: true }).click();
+  await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Confirm these actions', exact: true })).toBeVisible(); await expect(page.locator('.family-task-list').getByText('Five-minute family pause')).toHaveCount(0);
   await page.getByRole('button', { name: 'Confirm these actions', exact: true }).click(); await expect(page.locator('.family-task-list').getByText('Five-minute family pause')).toBeVisible();
   await page.unroute(external); await page.route(external, async route => { mocked.calls.push({ url: route.request().url(), headers: {}, body: '', test: false }); await route.fulfill({ status: 429, headers: { 'Access-Control-Allow-Origin': '*' }, body: '{}' }); });
-  await page.getByLabel('Ask about your week').fill('Another small idea please.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click(); await page.getByRole('button', { name: 'Send this request to Groq', exact: true }).click();
+  await page.getByLabel('Ask about your week').fill('Another small idea please.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
   await expect(page.locator('.home-assistant .notice[role=alert]')).toContainText('quota'); expect(mocked.calls).toHaveLength(3); expect(mocked.calls.every(c => c.url.startsWith('https://api.groq.com/'))).toBe(true);
 });
 
@@ -71,7 +71,7 @@ test('invalid provider output makes no partial change and demo perspective/reset
   const { calls } = await mockProviders(page, { invalid: true });
   await page.goto('/settings'); await connect(page, 'groq', 'Groq'); await page.getByRole('link', { name: 'Go to your assistant', exact: true }).click();
   const tasks = await page.locator('.family-task-list').innerText();
-  await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click(); await page.getByRole('button', { name: 'Send this request to Groq', exact: true }).click();
+  await page.getByLabel('Ask about your week').fill('Help us plan a calmer afternoon.'); await page.getByRole('button', { name: 'Ask the assistant', exact: true }).click();
   await expect(page.locator('.home-assistant .notice[role=alert]')).toBeVisible(); expect(await page.locator('.family-task-list').innerText()).toBe(tasks);
   await page.getByRole('button', { name: 'Family & more', exact: true }).click(); await page.getByRole('link', { name: /Meet the sample family/ }).click(); await page.getByRole('button', { name: /Mariam/ }).click();
   await expect(page.getByLabel('Answer with')).toContainText('Groq · connect'); expect(calls).toHaveLength(2);
