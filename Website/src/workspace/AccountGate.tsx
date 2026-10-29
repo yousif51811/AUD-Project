@@ -11,5 +11,5 @@ export function AccountGate({ children }: {
         return children;
     if (w.user && w.identity && w.family)
         return children;
-    return <main className="family-main stack"><h1>{t("Your private family space")}</h1><p>{!w.user ? t("Sign in or try the fictional family.") : !w.identity ? t("Unlock your encrypted vault to continue.") : t("Create or join a family to get started.")}</p><Link className="btn btn-primary" to="/account">{t("Continue to your account")}</Link><Link className="btn btn-secondary" to="/demo">{t("Try the sample family")}</Link></main>;
+    return <main className="family-main stack"><h1>{t("Your private family space")}</h1><p>{!w.user ? t("Sign in or try the fictional family.") : !w.identity ? t("Restore access to your family space.") : t("Create or join a family to get started.")}</p><Link className="btn btn-primary" to="/account">{t("Continue to your account")}</Link><Link className="btn btn-secondary" to="/demo">{t("Try the sample family")}</Link></main>;
 }

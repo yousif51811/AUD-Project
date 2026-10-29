@@ -39,6 +39,16 @@ export async function handle(request: Request, path: string[]) {
         const body = async () => { const text = await request.text(); if (text.length > 1000000)
             throw new Fault(413, 'This record is too large.'); return JSON.parse(text); };
         const [resource, id, action] = path;
+        if (resource === 'username' && request.method === 'POST') {
+            const { username } = z.object({ username: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,30}$/) }).parse(await body());
+            await db.user.update({ where: { id: userId }, data: { username } });
+            return json({ username });
+        }
+        if (resource === 'invitations' && request.method === 'GET') {
+            const invitations = await db.familyInvitation.findMany({ where: { email: session.user.email.toLowerCase(), acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, include: { family: true } });
+            const owners = await db.user.findMany({ where: { id: { in: invitations.map(i => i.family.ownerId) } }, select: { id: true, name: true } });
+            return json(invitations.map(i => ({ id: i.id, email: i.email, ageGroup: i.ageGroup, role: i.role, expiresAt: i.expiresAt, inviter: owners.find(o => o.id === i.family.ownerId)?.name })));
+        }
         if (resource === 'identity') {
             if (request.method === 'GET')
                 return json(await db.encryptionIdentity.findUnique({ where: { userId } }));
@@ -58,7 +68,7 @@ export async function handle(request: Request, path: string[]) {
         }
         if (resource === 'families' && !id) {
             if (request.method === 'GET') {
-                const rows = await db.familyMembership.findMany({ where: { userId, status: { in: ['ACTIVE', 'PENDING'] } }, include: { family: true } });
+                const rows = await db.familyMembership.findMany({ where: { userId, status: { in: ['ACTIVE', 'PENDING'] } }, orderBy: { joinedAt: 'asc' }, include: { family: true } });
                 return json(rows.map(m => ({ id: m.familyId, role: m.role, status: m.status, timezone: m.family.timezone, ownerId: m.family.ownerId })));
             }
             const u = await db.user.findUniqueOrThrow({ where: { id: userId } });
@@ -73,20 +83,31 @@ export async function handle(request: Request, path: string[]) {
             catch {
                 throw new Fault(400, 'Choose a valid timezone.');
             }
-            return json(await db.family.create({ data: { ownerId: userId, timezone, memberships: { create: { userId, role: 'OWNER', status: 'ACTIVE' } } } }));
+            return json(await db.$transaction(async tx => {
+                await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))::text`;
+                if (await tx.familyMembership.count({ where: { userId, status: { in: ['ACTIVE', 'PENDING'] } } }))
+                    throw new Fault(409, 'You already have a family. Open your family to continue.');
+                return tx.family.create({ data: { ownerId: userId, timezone, memberships: { create: { userId, role: 'OWNER', status: 'ACTIVE' } } } });
+            }));
         }
-        if (resource === 'join') {
-            const { token } = z.object({ token: z.string().min(20).max(200) }).parse(await body());
-            const row = await db.familyInvitation.findUnique({ where: { tokenHash: digest(token) } });
+        if (resource === 'join' && request.method === 'POST') {
+            const input = z.object({ token: z.string().min(20).max(200).optional(), invitationId: z.string().max(100).optional() }).refine(x => !!x.token !== !!x.invitationId).parse(await body());
+            const row = await db.familyInvitation.findUnique({ where: input.token ? { tokenHash: digest(input.token) } : { id: input.invitationId! } });
             if (!row || row.revokedAt || row.acceptedAt || row.expiresAt < new Date() || row.email.toLowerCase() !== session.user.email.toLowerCase())
                 throw new Fault(400, 'This invitation is expired, used, or belongs to another email.');
+            const targetUser = await db.user.findUniqueOrThrow({ where: { id: userId } });
+            if (targetUser.ageGroup !== row.ageGroup)
+                throw new Fault(400, 'Ask for an invitation matching your account age group.');
             if (!await db.encryptionIdentity.findUnique({ where: { userId } }))
                 throw new Fault(400, 'Set up your vault before joining.');
             await db.$transaction(async (tx) => {
+                await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))::text`;
+                if (await tx.familyMembership.count({ where: { userId, status: { in: ['ACTIVE', 'PENDING'] } } }))
+                    throw new Fault(409, 'You already have a family. Open your family to continue.');
                 const accepted = await tx.familyInvitation.updateMany({ where: { id: row.id, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, data: { acceptedAt: new Date() } });
-                if (!accepted.count)
-                    throw new Fault(409, 'This invitation has already been accepted.');
-                await tx.familyMembership.create({ data: { familyId: row.familyId, userId, role: row.ageGroup === 'child' ? 'CHILD' : 'MEMBER', status: 'PENDING' } });
+                if (!accepted.count) throw new Fault(409, 'This invitation has already been accepted.');
+                const membership = { role: row.ageGroup === 'child' ? 'CHILD' : row.role, status: 'PENDING' };
+                await tx.familyMembership.upsert({ where: { familyId_userId: { familyId: row.familyId, userId } }, create: { familyId: row.familyId, userId, ...membership }, update: membership });
             });
             return json({ familyId: row.familyId, status: 'PENDING' });
         }
@@ -123,9 +144,22 @@ export async function handle(request: Request, path: string[]) {
                 return json({ ok: true });
             }
             if (action === 'invite') {
-                const data = z.object({ email: z.email(), ageGroup: z.enum(['adult', 'teen', 'child', 'older']) }).parse(await body());
+                await member(userId, id, true);
+                if (request.method === 'GET') return json(await db.familyInvitation.findMany({ where: { familyId: id, acceptedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, select: { id: true, email: true, ageGroup: true, role: true, expiresAt: true } }));
+                if (request.method === 'DELETE') {
+                    const { invitationId } = z.object({ invitationId: z.string() }).parse(await body());
+                    await db.familyInvitation.updateMany({ where: { id: invitationId, familyId: id, acceptedAt: null }, data: { revokedAt: new Date() } });
+                    return json({ ok: true });
+                }
+                const data = z.object({ email: z.email().optional(), target: z.string().trim().min(3).max(254).optional(), ageGroup: z.enum(['adult', 'teen', 'child', 'older']), role: z.enum(['MEMBER', 'VIEWER']).default('MEMBER') }).refine(x => !!x.email || !!x.target).parse(await body());
+                const target = (data.target ?? data.email!).toLowerCase().replace(/^@/, '');
+                const recipient = await db.user.findFirst({ where: target.includes('@') ? { email: target } : { username: target } });
+                if (!recipient && !target.includes('@')) throw new Fault(404, 'Username not found. Invite them using their email instead.');
+                const email = recipient?.email.toLowerCase() ?? z.email().parse(target);
+                if (email === session.user.email.toLowerCase()) throw new Fault(400, 'Invite another person to your family.');
+                if (recipient && await db.familyMembership.count({ where: { userId: recipient.id, status: { in: ['ACTIVE', 'PENDING'] } } })) throw new Fault(409, 'This person already has a family.');
                 const token = randomBytes(32).toString('base64url');
-                await db.familyInvitation.create({ data: { familyId: id, ...data, email: data.email.toLowerCase(), tokenHash: digest(token), expiresAt: new Date(Date.now() + 48 * 3600000) } });
+                await db.familyInvitation.create({ data: { familyId: id, email, ageGroup: recipient?.ageGroup ?? data.ageGroup, role: (recipient?.ageGroup ?? data.ageGroup) === 'child' ? 'CHILD' : data.role, tokenHash: digest(token), expiresAt: new Date(Date.now() + 48 * 3600000) } });
                 return json({ token });
             }
             if (action === 'timezone') {

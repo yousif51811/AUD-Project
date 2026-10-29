@@ -89,3 +89,12 @@ export async function decryptRecord(envelope: EncryptedEnvelope, userId: string,
     }
 }
 export async function fingerprint(identity: PublicIdentity) { await sodium.ready; return sodium.to_hex(sodium.crypto_generichash(16, identity.publicKey + identity.signingKey, null)).match(/.{4}/g)!.join(' '); }
+
+/** Replace only the independent recovery wrap, preserving password protection. */
+export async function replaceRecovery(identity: Identity, vault: VaultBackup) {
+    await sodium.ready;
+    const recovery = sodium.randombytes_buf(32);
+    const sealed = sealSecret(JSON.stringify(identity), recovery);
+    const recoveryCode = b64(recovery); sodium.memzero(recovery);
+    return { vault: { ...vault, recoveryNonce: sealed.nonce, recoveryCiphertext: sealed.ciphertext }, recoveryCode };
+}

@@ -8,18 +8,18 @@ test('unconfigured Google remains optional and email sign-in remains usable',asy
   await page.goto('/sign-in');const dialog=page.getByRole('dialog');
   await expect(dialog.getByRole('button',{name:'Continue with Google',exact:true})).toBeDisabled();
   await expect(dialog.getByText('Google sign-in is not enabled on this site yet. You can use email below.',{exact:true})).toBeVisible();
-  await dialog.getByLabel('Email',{exact:true}).fill('synthetic@example.test');await expect(dialog.getByRole('button',{name:'Sign in',exact:true})).toBeEnabled();
+  await dialog.getByLabel('Username or email',{exact:true}).fill('synthetic@example.test');await expect(dialog.getByRole('button',{name:'Sign in',exact:true})).toBeEnabled();
 });
 
-test('Google signup carries age and relationship with fixed account callbacks',async({page})=>{
+test('Google signup carries age with fixed account callbacks',async({page})=>{
   await page.route('**/api/auth-options',route=>route.fulfill({json:{google:true}}));
   let body:Record<string,unknown>|undefined;
   await page.route('**/api/auth/sign-in/social',async route=>{body=route.request().postDataJSON();await route.fulfill({status:403,json:{code:'GOOGLE_INVITATION_REQUIRED',message:'DO NOT DISPLAY raw-provider-secret'}});});
   await page.goto('/sign-up');const dialog=page.getByRole('dialog');
-  await dialog.getByRole('combobox',{name:'Age group',exact:true}).selectOption('teen');await dialog.getByLabel('Relationship (optional)',{exact:true}).fill('Sibling');
+  await dialog.getByRole('combobox',{name:'Age group',exact:true}).selectOption('teen');
   await dialog.getByRole('button',{name:'Continue with Google',exact:true}).click();
   await expect(dialog.getByRole('alert')).toContainText('current adult invitation');
-  expect(body).toMatchObject({provider:'google',requestSignUp:true,callbackURL:'/account',newUserCallbackURL:'/account',errorCallbackURL:'/sign-up?google=error',additionalData:{ageGroup:'teen',relationship:'Sibling'}});
+  expect(body).toMatchObject({provider:'google',requestSignUp:true,callbackURL:'/account',newUserCallbackURL:'/account',errorCallbackURL:'/sign-up?google=error',additionalData:{ageGroup:'teen',relationship:''}});
   await expect(dialog).not.toContainText('raw-provider-secret');await expect(dialog.getByRole('button',{name:'Create account',exact:true})).toBeEnabled();
 });
 
@@ -64,7 +64,7 @@ for(const width of [360,768,1440])for(const palette of ['light','dark'] as const
     await expect(dialog.getByRole('button',{name:language==='ar'?'المتابعة باستخدام Google':'Continue with Google',exact:true})).toBeEnabled();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1)).toBe(false);
     const box=await dialog.boundingBox();expect(box!.x).toBeGreaterThanOrEqual(0);expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
-    await dialog.getByLabel(language==='ar'?'الاسم الأول':'First name',{exact:true}).fill('Synthetic');
+    await dialog.getByLabel(language==='ar'?'اسمك':'Your name',{exact:true}).fill('Synthetic');
     await page.screenshot({path:`/tmp/familymind-google-${language}-${width}-${palette}.png`,animations:'disabled'});
   }
 });

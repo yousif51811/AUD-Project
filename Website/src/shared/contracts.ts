@@ -25,6 +25,7 @@ export interface SessionUser {
     id: string;
     name: string;
     email: string;
+    username?: string | null;
     ageGroup?: string;
     relationship?: string;
 }
@@ -48,4 +49,13 @@ export interface WorkspaceRecord {
 export interface RecordPayload {
     data: Record<string, unknown>;
     cloudAllowed: boolean;
+}
+
+export interface InvitationSummary {
+    id: string;
+    email: string;
+    ageGroup: string;
+    role: string;
+    expiresAt: string;
+    inviter?: string;
 }

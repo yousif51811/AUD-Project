@@ -1,6 +1,6 @@
 import { t, useLanguage } from '@/i18n';
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { ArrowRight, Check, Plus, Heart, Coffee, BookOpen, MessageCircle } from 'lucide-react';
 import { useDocumentTitle } from '@/hooks/useDocumentTitle';
 import { useWorkspace } from '@/workspace/Workspace';
@@ -9,8 +9,8 @@ export function Home() {
   useLanguage();
   useDocumentTitle('A place for the everyday');
   const [checked,setChecked]=useState(false);
-  const workspace=useWorkspace();
-  if(workspace.mode==='account'&&workspace.user&&workspace.identity&&workspace.family) return <Navigate to="/dashboard" replace/>;
+  const workspace=useWorkspace(), location=useLocation();
+  if(location.pathname==='/'&&workspace.mode==='account'&&workspace.user&&workspace.identity&&workspace.family) return <Navigate to="/dashboard" replace/>;
   return <>
     <section className="home-hero">
       <div className="home-hero-copy"><p className="home-label"><span/>{t("A little room for what matters.")}</p><h1 tabIndex={-1}>{t("Family life.")}<br/>{t("A little lighter.")}<br/><em>{t("A lot more together.")}</em></h1><p>{t("School runs. Study breaks. Checking in on grandma. Share the everyday load, and make room for each other.")}</p><div className="home-actions"><AuthLink to="/sign-up" className="btn btn-primary btn-lg">{t("Set up your family ")}<ArrowRight size={18}/></AuthLink><Link to="/demo" className="home-demo-link">{t("Meet our sample family ")}<ArrowRight size={16}/></Link></div><span className="home-fineprint">{t("Your people. Your pace. One shared space.")}</span></div>

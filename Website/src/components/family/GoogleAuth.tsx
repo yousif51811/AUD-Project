@@ -47,7 +47,7 @@ export function GoogleSignIn({ signup, invitationToken, readEnrollment, disabled
   };
   return <div className="google-auth stack stack-sm">
     <button type="button" className="btn btn-secondary google-button" disabled={disabled || pending || available !== true} aria-busy={pending || available === null} onClick={() => void connect()}><GoogleMark/>{pending ? t('Opening Google…') : t('Continue with Google')}</button>
-    {available === null ? <p className="hint" role="status">{t('Checking Google sign-in…')}</p> : !available ? <p className="hint">{t('Google sign-in is not enabled on this site yet. You can use email below.')}</p> : <p className="hint">{signup ? t('Google supplies your name and email. Choose your age group below first; children and teens need an adult invitation.') : t('Google signs you in. Your encrypted vault still unlocks separately.')}</p>}
+    {available === null ? <p className="hint" role="status">{t('Checking Google sign-in…')}</p> : !available ? <p className="hint">{t('Google sign-in is not enabled on this site yet. You can use email below.')}</p> : <p className="hint">{signup ? t('Google supplies your name and email. Choose your age group below first; children and teens need an adult invitation.') : t('Google signs you in. This browser remembers your encrypted access; use a recovery code on a new device.')}</p>}
     {(error || callbackError) && <p className="notice notice-safety" role="alert">{t(error || callbackError)}</p>}
     <div className="auth-divider"><span/>{t('or use email')}<span/></div>
   </div>;
@@ -81,7 +81,7 @@ export function GoogleAccountConnection() {
     <div className="cluster"><GoogleMark/><h2 id="google-account-title">{t('Sign-in methods')}</h2></div>
     {connected ? <p className="cluster"><Check size={17} aria-hidden/>{t('Google is connected to this account.')}</p> : <><p className="hint">{t('Already use email? Link the same Google email while signed in to keep one account and your existing vault.')}</p><button type="button" className="btn btn-secondary google-button" disabled={available !== true || connected === null || pending} aria-busy={pending} onClick={() => void link()}>{pending ? t('Opening Google…') : t('Link Google to this account')}</button></>}
     {available === false && <p className="hint">{t('Google sign-in is not enabled on this site yet.')}</p>}
-    <p className="hint">{t('Google never unlocks your vault or grants family access. Your vault passphrase and invitation approvals still apply.')}</p>
+    <p className="hint">{t('Google does not grant family membership. Owners confirm access, and a new device may need your recovery code.')}</p>
     {(error || callbackError) && <p className="notice notice-safety" role="alert">{t(error || callbackError)}</p>}
   </section>;
 }

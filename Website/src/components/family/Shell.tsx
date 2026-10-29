@@ -18,11 +18,11 @@ const PAGES = [
   { to:'/schedule', label:'Calendar', icon:CalendarDays },
 ];
 const MORE = [
-  {to:'/account',label:'Your account',text:'Sign in, unlock your vault or manage sessions.',icon:Users},
+  {to:'/account',label:'Your account',text:'Your username, invitations and account access.',icon:Users},
   {to:'/tasks',label:'Responsibilities',text:'Agree recurring work and rotations.',icon:ListChecks},
   {to:'/check-ins',label:'Personal check-ins',text:'A private pause, and voluntary availability.',icon:HeartHandshake},
   {to:'/notifications',label:'Reminders & requests',text:'Review suggestions and agreed responsibilities.',icon:ListChecks},
-  {to:'/family',label:'People & privacy',text:'Invitations, encrypted sharing and AI settings.',icon:Users},
+  {to:'/family#invite-family',label:'Invite family',text:'Invitations, encrypted sharing and AI settings.',icon:Users},
   {to:'/assessment',label:'Family check-in',text:'Take a moment to see how things are going.',icon:Users},
   {to:'/results',label:'Our check-in results',text:'Understand the week, then choose a next step.',icon:ListChecks},
   {to:'/dashboard#assistant',label:'Your family assistant',text:'A helping hand, right on your homepage.',icon:MessageCircle},
@@ -47,7 +47,7 @@ export function FamilyShell({ children }: { children?: ReactNode }) {
     setMenu(false);
     if (!hash) window.scrollTo({top:0,behavior:'instant'});
     const frame=requestAnimationFrame(()=>{
-      const target=['#assistant','#ai-settings'].includes(hash)?document.getElementById(hash.slice(1)):null;
+      const target=['#assistant','#ai-settings','#invite-family'].includes(hash)?document.getElementById(hash.slice(1)):null;
       if(target){target.scrollIntoView({block:'start',behavior:'instant'});target.focus({preventScroll:true});}
       else document.querySelector<HTMLElement>('h1')?.focus({preventScroll:true});
     });

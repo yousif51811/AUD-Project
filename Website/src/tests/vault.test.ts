@@ -1,5 +1,5 @@
 import {beforeAll,describe,it,expect} from 'vitest';
-import {createIdentity,protectIdentity,unlockIdentity,encryptRecord,decryptRecord,type Identity} from '@/lib/vault/crypto';
+import {createIdentity,protectIdentity,replaceRecovery,unlockIdentity,encryptRecord,decryptRecord,type Identity} from '@/lib/vault/crypto';
 import {canonical} from '@/lib/canonical';
 let alice:Identity,bob:Identity,eve:Identity;
 beforeAll(async()=>{alice=await createIdentity();bob=await createIdentity();eve=await createIdentity();});
@@ -15,4 +15,13 @@ describe('encrypted record boundaries',()=>{
  it('a removed recipient cannot decrypt a new version',async()=>{const e=await encryptRecord({id:'record-1',familyId:'family-1',kind:'checkin',version:2,authorId:'alice',senderId:'alice',editorIds:['alice'],recipients:[person('alice',alice)],payload:{data:{note:'New version'},cloudAllowed:false}},alice);await expect(decryptRecord(e,'bob',bob,person('alice',alice))).rejects.toThrow();});
  it('protects keys with independent passphrase and recovery paths',async()=>{const {vault,recoveryCode}=await protectIdentity(alice,'a separate vault passphrase');expect(JSON.stringify(vault)).not.toContain(alice.privateKey);expect((await unlockIdentity(vault,'a separate vault passphrase')).publicKey).toBe(alice.publicKey);expect((await unlockIdentity(vault,recoveryCode,true)).publicKey).toBe(alice.publicKey);await expect(unlockIdentity(vault,'incorrect passphrase')).rejects.toThrow();await expect(unlockIdentity(vault,'not-a-recovery-code',true)).rejects.toThrow();});
  it('signing serialization is stable across property insertion order',()=>{expect(canonical({b:[2,1],a:{y:2,x:1}})).toBe(canonical({a:{x:1,y:2},b:[2,1]}));});
+});
+
+it('replaces recovery without changing account-password protection', async () => {
+ const identity = await createIdentity(); const original = await protectIdentity(identity, 'Synthetic account password');
+ const replacement = await replaceRecovery(identity, original.vault);
+ expect(replacement.vault.ciphertext).toBe(original.vault.ciphertext);
+ expect(await unlockIdentity(replacement.vault, 'Synthetic account password')).toEqual(identity);
+ expect(await unlockIdentity(replacement.vault, replacement.recoveryCode, true)).toEqual(identity);
+ await expect(unlockIdentity(replacement.vault, original.recoveryCode, true)).rejects.toThrow();
 });

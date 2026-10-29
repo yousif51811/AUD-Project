@@ -1,4 +1,5 @@
 // Adapted from the team-source authentication configuration. Household content is never sent here.
+import { username } from 'better-auth/plugins';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { addOAuthServerContext, createAuthMiddleware, getOAuthState } from 'better-auth/api';
@@ -10,6 +11,7 @@ import { googleCredentials, googleEnrollmentSchema, googleSignupSchema, validGoo
 const google = googleCredentials();
 const origin = process.env.APP_URL ?? 'http://localhost:3000';
 export const auth = betterAuth({
+    plugins: [username({ displayUsername: false, usernameValidator: value => /^[a-zA-Z0-9_]{3,30}$/.test(value) })],
     appName: 'FamilyMind AI', baseURL: origin, secret: process.env.AUTH_SECRET,
     database: prismaAdapter(db, { provider: 'postgresql', transaction: true }),
     trustedOrigins: [origin, ...(origin.includes('localhost') ? [origin.replace('localhost', '127.0.0.1')] : [])],
@@ -71,6 +73,6 @@ export const auth = betterAuth({
                     throw new APIError('FORBIDDEN', { message: 'Ask an adult for an invitation matching your email and age group.' });
             }
         }) },
-    rateLimit: { enabled: true, storage: 'database', window: 60, max: 50, customRules: { '/sign-in/email': { window: 60, max: 5 }, '/sign-up/email': { window: 3600, max: 5 }, '/sign-in/social': { window: 60, max: 10 }, '/link-social': { window: 60, max: 5 } } },
+    rateLimit: { enabled: true, storage: 'database', window: 60, max: 50, customRules: { '/sign-in/username': { window: 60, max: 5 }, '/sign-in/email': { window: 60, max: 5 }, '/sign-up/email': { window: 3600, max: 5 }, '/sign-in/social': { window: 60, max: 10 }, '/link-social': { window: 60, max: 5 } } },
     advanced: { useSecureCookies: process.env.NODE_ENV === 'production' }, telemetry: { enabled: false }, logger: { disabled: true },
 });

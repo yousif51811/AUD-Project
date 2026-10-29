@@ -1,3 +1,20 @@
+# Signup failure handling
+
+- Signup no longer attempts to parse every failed response as JSON. Empty/malformed/gateway responses show stable bilingual guidance, preserve the form and allow retry; known username/email conflicts receive specific messages.
+- Authentication route failures return sanitized non-cacheable JSON while preserving successful responses, validation errors, OAuth redirects and cookies. Workspace response parsing also handles empty/truncated responses safely.
+- A read-only check found the configured remote database still had only the original migration: username and invitation-role columns were absent. After user authorization on 29 October, the additive migration was applied to the configured Neon database and both columns/completed migration records were verified. Existing data was preserved. No application deployment was performed.
+
+---
+
+# Simpler accounts and one family
+
+- New email signup uses a name, username, email, age group and one account password. Encryption is prepared in the browser automatically using that password; Google accounts use generated protection plus a recovery code. Existing vaults and recovery codes remain compatible. Browser-local remembered access survives reloads and is removed on sign-out; no account password or readable encryption key is uploaded as a stored record.
+- Returning accounts open their family automatically. New creation/join requests enforce one active or pending family, including simultaneous requests. Older memberships and content are retained.
+- Invite family is visible on Home and in the menu/account page. Owners invite by username or email, choose Member/Read-only, copy a 48-hour link, review pending members and cancel unused invitations. Recipients can join from their account inbox or the link; owners explicitly confirm device-side encrypted sharing.
+- Added a migration for usernames and invitation roles, Arabic copy, recovery-code rotation without another password, and account/permission/browser regressions. Updated README, report and contributor guidance. Deployment is separate.
+
+---
+
 # Assistant: send directly with an inline provider notice
 
 - Removed the per-message request-preview modal. Send and Enter now submit directly, while built-in questions remain local.

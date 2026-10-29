@@ -2,6 +2,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { authClient } from '@/lib/auth-client';
 import { createIdentity, protectIdentity, unlockIdentity, encryptRecord, decryptRecord, type Identity } from '@/lib/vault/crypto';
+import { rememberIdentity } from '@/lib/vault/device';
+import { prepareAccess, forgetPreparedAccess } from './access';
 import { canonical } from '@/lib/canonical';
 import { api } from './transport';
 import { envelopeSchema, type FamilySummary, type Member, type SessionUser, type RecordKind, type WorkspaceRecord, type VaultBackup } from '@/shared/contracts';
@@ -19,6 +21,8 @@ export interface RecordChange {
 }
 export interface Workspace {
     user: SessionUser | null;
+    recoveryCode: string;
+    completeSignIn: (password?: string) => Promise<void>;
     identity: Identity | null;
     family: FamilySummary | null;
     families: FamilySummary[];
@@ -65,6 +69,7 @@ export function WorkspaceProvider({ children }: {
     children: ReactNode;
 }) {
     const [user, setUser] = useState<SessionUser | null>(null), [identity, setIdentity] = useState<Identity | null>(null);
+    const [recoveryCode, setRecoveryCode] = useState('');
     const [families, setFamilies] = useState<FamilySummary[]>([]), [family, setFamily] = useState<FamilySummary | null>(null);
     const [members, setMembers] = useState<Member[]>([]), [records, setRecords] = useState<WorkspaceRecord[]>([]);
     const [mode, setMode] = useState<'demo' | 'account'>('demo'), [demoMember, setDemoMember] = useState(() => { try {
@@ -89,7 +94,7 @@ export function WorkspaceProvider({ children }: {
     demoActor.current = demoMember;
     const [status, setStatus] = useState('Sample family'), [error, setError] = useState(''), [loading, setLoading] = useState(false), [generation, setGeneration] = useState(0);
     const envs = useRef(new Map<string, ReturnType<typeof envelopeSchema.parse>>());
-    const epoch = useRef(0);
+    const epoch = useRef(0), loginEpoch = useRef(0);
     const running = useRef(false);
     const serial = useRef(Promise.resolve());
     const current = useRef({ user, identity, family, members, mode });
@@ -105,6 +110,7 @@ export function WorkspaceProvider({ children }: {
             if (run !== epoch.current)
                 return;
             setFamilies(fs);
+            if (!f && fs.some(x => x.status === 'ACTIVE')) { setFamily(fs.find(x => x.status === 'ACTIVE')!); return; }
             if (!f || !fs.some(x => x.id === f.id && x.status === 'ACTIVE')) {
                 if (f) {
                     setFamily(null);
@@ -157,13 +163,26 @@ export function WorkspaceProvider({ children }: {
             }
         }
     }, [clear]);
-    useEffect(() => { let live = true; void authClient.getSession().then(r => { if (live && r.data) {
-        setUser(r.data.user as SessionUser);
-        setMode('account');
-    } }).catch(() => { }); return () => { live = false; }; }, []);
+    const completeSignIn = useCallback(async (password?: string) => {
+        const attempt = ++loginEpoch.current;
+        const response = await authClient.getSession();
+        if (!response.data || attempt !== loginEpoch.current) return;
+        const account = response.data.user as SessionUser;
+        setUser(account); setMode('account'); setLoading(true);
+        try {
+            const access = await prepareAccess(account.id, password);
+            if (attempt !== loginEpoch.current) return;
+            setIdentity(access.identity); if (access.recoveryCode) setRecoveryCode(access.recoveryCode);
+            setStatus(access.identity ? 'Encrypted changes up to date' : 'Restore access to continue');
+            if (access.identity && !access.remembered) setError('Browser storage is unavailable. Save your recovery code before leaving this page.');
+        } catch (e) { if (attempt === loginEpoch.current) setError((e as Error).message); throw e; }
+        finally { if (attempt === loginEpoch.current) setLoading(false); }
+    }, []);
+    useEffect(() => { void completeSignIn().catch(e => setError((e as Error).message)); }, [completeSignIn]);
+    const waitingForProfile = !!family && !records.some(record => record.kind === 'profile');
     useEffect(() => { if (mode !== 'account' || !user)
         return; void refresh(); const tick = () => { if (document.visibilityState === 'visible' && !running.current)
-        void refresh(); }; const id = window.setInterval(tick, 15000); window.addEventListener('focus', tick); document.addEventListener('visibilitychange', tick); return () => { clearInterval(id); window.removeEventListener('focus', tick); document.removeEventListener('visibilitychange', tick); }; }, [refresh, mode, user, family, identity]);
+        void refresh(); }; const id = window.setInterval(tick, waitingForProfile ? 1000 : 15000); window.addEventListener('focus', tick); document.addEventListener('visibilitychange', tick); return () => { clearInterval(id); window.removeEventListener('focus', tick); document.removeEventListener('visibilitychange', tick); }; }, [refresh, mode, user, family, identity, waitingForProfile]);
     const save: Workspace['save'] = useCallback((kind, id, data, options = {}) => {
         const captured = epoch.current;
         const task = async () => {
@@ -289,6 +308,7 @@ export function WorkspaceProvider({ children }: {
                 throw new Error('Vault identity mismatch.');
             clear();
             setIdentity(key);
+            await rememberIdentity(user.id, key);
             setMode('account');
             setError('');
         }
@@ -320,7 +340,7 @@ export function WorkspaceProvider({ children }: {
         setMembers(xs => xs.map(x => x.userId === id ? { ...x, status: 'ACTIVE' } : x));
         current.current.members = members.map(x => x.userId === id ? { ...x, status: 'ACTIVE' } : x);
         for (const record of records.filter(r => r.data.audience === 'family' && (r.authorId === user.id || r.kind === 'profile')))
-            await save(record.kind, record.id, record.data, { recipientIds: [...record.recipientIds, id], editorIds: ['plan', 'event', 'care'].includes(record.kind) ? [...record.editorIds, id] : record.editorIds, cloudAllowed: record.cloudAllowed });
+            await save(record.kind, record.id, record.data, { recipientIds: [...record.recipientIds, id], editorIds: approved.role !== 'VIEWER' && ['plan', 'event', 'care'].includes(record.kind) ? [...record.editorIds, id] : record.editorIds, cloudAllowed: record.cloudAllowed });
         const profile = records.find(r => r.kind === 'profile');
         if (profile) {
             const currentMembers = (profile.data.members as Array<Record<string, unknown>>) ?? [];
@@ -336,7 +356,7 @@ export function WorkspaceProvider({ children }: {
         }
         catch { /* in-memory choice */ }
     } setStatus('Sample family · fictional data'); setError(''); };
-    return <Context.Provider value={{ user, identity, family, families, members, records: mode === 'demo' ? demoRecords.filter(r => r.recipientIds.includes(demoMember)) : records, mode, actorId: mode === 'demo' ? demoMember : user?.id ?? '', status, error, loading, generation, setError, refresh, unlock, createVault, selectFamily: id => { clear(); setFamily(families.find(x => x.id === id) ?? null); }, enterDemo, exitDemo: () => { clear(); setMode('account'); }, signOut: async () => { clear(); setIdentity(null); setFamily(null); setUser(null); setMode('demo'); await authClient.signOut(); }, save, saveMany, remove, approve, pinMember: checkPin }}>{children}</Context.Provider>;
+    return <Context.Provider value={{ user, recoveryCode, completeSignIn, identity, family, families, members, records: mode === 'demo' ? demoRecords.filter(r => r.recipientIds.includes(demoMember)) : records, mode, actorId: mode === 'demo' ? demoMember : user?.id ?? '', status, error, loading, generation, setError, refresh, unlock, createVault, selectFamily: id => { clear(); setFamily(families.find(x => x.id === id) ?? null); }, enterDemo, exitDemo: () => { clear(); setMode('account'); if (user && !identity) void completeSignIn().catch(e => setError((e as Error).message)); }, signOut: async () => { loginEpoch.current++; setLoading(false); if (user) await forgetPreparedAccess(user.id); setRecoveryCode(''); clear(); setIdentity(null); setFamily(null); setFamilies([]); setUser(null); setMode('demo'); await authClient.signOut(); }, save, saveMany, remove, approve, pinMember: checkPin }}>{children}</Context.Provider>;
 }
 export function useWorkspace() { const value = useContext(Context); if (!value)
     throw new Error('Workspace provider is missing.'); return value; }

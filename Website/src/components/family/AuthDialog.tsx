@@ -6,6 +6,9 @@ import { Modal } from '@/components/shared/Modal';
 import { CourtyardDrawing } from './LivingGarden';
 import { GoogleSignIn } from './GoogleAuth';
 import { LanguageControl } from './LanguageControl';
+import { accountError } from '@/lib/http-response';
+import { api } from '@/workspace/transport';
+import type { FamilySummary } from '@/shared/contracts';
 import { useWorkspace } from '@/workspace/Workspace';
 
 // Capture before the route makes its background inert (which clears browser focus).
@@ -28,6 +31,7 @@ export function authBackground(location: Location): Location {
 
 export function AuthenticationForm({ signup, invitationToken, onSwitch }: { signup: boolean; invitationToken?: string; onSwitch: () => void }) {
   useLanguage();
+  const workspace = useWorkspace(), navigate = useNavigate();
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [visible, setVisible] = useState(false);
   const helpId = useId(), panelId = useId(), tabs = useRef<HTMLDivElement>(null), focusTab = useRef(false);
   const controller = useRef<AbortController | null>(null), form = useRef<HTMLFormElement>(null);
@@ -38,13 +42,12 @@ export function AuthenticationForm({ signup, invitationToken, onSwitch }: { sign
     const data = new FormData(event.currentTarget);
     const request = new AbortController(); controller.current = request; setBusy(true); setError('');
     try {
-      const body = { email: String(data.get('email')).trim(), password: String(data.get('password')), ...(signup ? { name: `${String(data.get('first')).trim()} ${String(data.get('last')).trim()}`, ageGroup: data.get('ageGroup'), relationship: data.get('relationship'), invitationToken } : {}) };
-      const response = await fetch(`/api/auth/${signup ? 'sign-up' : 'sign-in'}/email`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body), signal: request.signal });
-      if (!response.ok) {
-        if (!signup) throw new Error(response.status === 429 ? 'Too many attempts. Please wait a moment before trying again.' : 'We could not sign you in. Check your email and password.');
-        const result = await response.json(); throw new Error(result.message ?? 'Account could not be created.');
-      }
-      if (!request.signal.aborted) window.location.assign(invitationToken ? '/invitations/' + encodeURIComponent(invitationToken) : '/account');
+      const login = String(data.get('email')).trim();
+      const byUsername = !signup && !login.includes('@');
+      const body = { ...(byUsername ? { username: login } : { email: login }), password: String(data.get('password')), ...(signup ? { name: String(data.get('first')).trim(), username: String(data.get('username')).trim().toLowerCase(), ageGroup: data.get('ageGroup'), relationship: String(data.get('relationship') ?? ''), invitationToken } : {}) };
+      const response = await fetch(`/api/auth/${signup ? 'sign-up' : 'sign-in'}/${byUsername ? 'username' : 'email'}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', body: JSON.stringify(body), signal: request.signal });
+      if (!response.ok) throw new Error(await accountError(response, signup));
+      if (!request.signal.aborted) { await workspace.completeSignIn(String(data.get('password'))); const families = await api<FamilySummary[]>('families'); navigate(invitationToken ? '/invitations/' + encodeURIComponent(invitationToken) : families.some(f => f.status === 'ACTIVE') ? '/dashboard' : '/account'); }
     } catch (e) { if (!request.signal.aborted) setError((e as Error).message); }
     finally { if (!request.signal.aborted) setBusy(false); }
   };
@@ -55,13 +58,13 @@ export function AuthenticationForm({ signup, invitationToken, onSwitch }: { sign
     <GoogleSignIn signup={signup} invitationToken={invitationToken} disabled={busy} onPending={setBusy} readEnrollment={() => {const fields = form.current ? new FormData(form.current) : null; return {ageGroup:String(fields?.get('ageGroup') ?? 'adult'),relationship:String(fields?.get('relationship') ?? '')};}}/>
     {error && <p role="alert" className="notice notice-safety">{t(error)}</p>}
     <form ref={form} className="stack auth-form" onSubmit={e => void submit(e)} aria-busy={busy}>
-      {signup && <><div className="grid grid-2"><label className="field">{t("First name")}<input data-autofocus className="input" name="first" required autoComplete="given-name" maxLength={60}/></label><label className="field">{t("Last name")}<input className="input" name="last" required autoComplete="family-name" maxLength={60}/></label></div><div className="grid grid-2"><label className="field">{t("Age group")}<select className="select" name="ageGroup"><option value="adult">{t("Adult")}</option><option value="older">{t("Older adult")}</option><option value="teen">{t("Teenager — invited")}</option><option value="child">{t("Child — invited")}</option></select></label><label className="field">{t("Relationship (optional)")}<input className="input" name="relationship" placeholder={t("Parent, sibling…")} maxLength={80}/></label></div></>}
-      <label className="field">{t("Email")}<input data-autofocus={!signup ? '' : undefined} className="input" name="email" dir="ltr" type="email" required autoComplete="email" placeholder={t("you@example.com")}/></label>
+      {signup && <><div className="grid grid-2"><label className="field">{t("Your name")}<input data-autofocus className="input" name="first" required autoComplete="name" maxLength={60}/></label><label className="field">{t("Username")}<input className="input" name="username" dir="ltr" required autoComplete="username" minLength={3} maxLength={30} pattern="[A-Za-z0-9_]{3,30}" title={t("3–30 letters, numbers or underscores")}/></label></div><div className="grid grid-2"><label className="field">{t("Age group")}<select className="select" name="ageGroup"><option value="adult">{t("Adult")}</option><option value="older">{t("Older adult")}</option><option value="teen">{t("Teenager — invited")}</option><option value="child">{t("Child — invited")}</option></select></label></div></>}
+      <label className="field">{signup ? t("Email") : t("Username or email")}<input data-autofocus={!signup ? '' : undefined} className="input" name="email" dir="ltr" type={signup ? "email" : "text"} required autoComplete={signup ? "email" : "username"} placeholder={t("you@example.com")}/></label>
       <label className="field">{t("Password")}<span className="auth-password"><input className="input" name="password" aria-label={t("Password")} aria-describedby={helpId} type={visible ? 'text' : 'password'} minLength={12} maxLength={128} required autoComplete={signup ? 'new-password' : 'current-password'}/><button type="button" aria-label={visible ? t("Hide password") : t("Show password")} aria-pressed={visible} onClick={() => setVisible(x => !x)}>{visible ? <EyeOff size={17}/> : <Eye size={17}/>}</button></span></label>
-      <span id={helpId} className="hint">{signup ? t("At least 12 characters. Children and teenagers need an adult’s invitation.") : t("Your account password, separate from your vault passphrase.")}</span>
+      <span id={helpId} className="hint">{signup ? t("At least 12 characters. Children and teenagers need an adult’s invitation.") : t("One password for your account and encrypted family space.")}</span>
       <button className="btn btn-primary auth-submit" disabled={busy}>{busy ? <><span className="spinner" aria-hidden/>{t("Please wait…")}</> : <>{signup ? t("Create account") : t("Sign in")}<ArrowRight size={18}/></>}</button>
     </form>
-    <div className="auth-reassurance"><LockKeyhole size={16} aria-hidden/><p>{t("Family content is encrypted on your device.")}<span>{t("You’ll unlock your separate vault after signing in.")}</span></p></div>
+    <div className="auth-reassurance"><LockKeyhole size={16} aria-hidden/><p>{t("Family content is encrypted on your device.")}<span>{t("Encryption is set up automatically when you join.")}</span></p></div>
     <p className="auth-demo">{t("Just looking around? ")}<Link to="/demo">{t("Meet the sample family ")}<ArrowRight size={13}/></Link></p>
     <details className="auth-help"><summary>{t("Need help accessing your account?")}</summary><p>{t("This prototype has no password-reset email service. Your vault recovery code restores encryption keys, not your account password. Use fictional data for the demonstration.")}</p></details>
     </div>

@@ -7,7 +7,7 @@ test.beforeEach(async () => {
   const db = new PrismaClient(); try { await db.rateLimit.deleteMany(); } finally { await db.$disconnect(); }
 });
 
-test('an existing account signs in through the modal and continues to vault unlock', async ({ page }) => {
+test('an existing account signs in through the modal and opens automatic encrypted access', async ({ page }) => {
   const email = `fm-dialog-${crypto.randomUUID()}@example.test`, password = 'Synthetic-modal-password-123456';
   const origin = process.env.TEST_BASE_URL ?? 'http://127.0.0.1:3002';
   const created = await page.request.post('/api/auth/sign-up/email', { headers: { Origin: origin }, data: { name: 'Synthetic modal account', email, password, ageGroup: 'adult' } }); expect(created.ok()).toBe(true);
@@ -16,9 +16,9 @@ test('an existing account signs in through the modal and continues to vault unlo
     expect((await page.request.post('/api/auth/sign-out', { headers: { Origin: origin }, data: {} })).ok()).toBe(true);
     await page.goto('/'); await page.getByRole('link', { name: 'Sign in', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Email', { exact: true }).fill(email); await dialog.getByLabel('Password', { exact: true }).fill(password);
+    await dialog.getByLabel('Username or email', { exact: true }).fill(email); await dialog.getByLabel('Password', { exact: true }).fill(password);
     await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(page).toHaveURL(/account$/); await expect(page.getByRole('heading', { name: 'Create your encrypted vault', exact: true })).toBeVisible({ timeout: 20000 });
+    await expect(page).toHaveURL(/account$/); await expect(page.getByRole('heading', { name: 'Hello, Synthetic modal account.', exact: true })).toBeVisible({ timeout: 20000 });
     await expect(page.getByRole('dialog')).toHaveCount(0);
   } finally { await db.user.deleteMany({ where: { email } }); await db.$disconnect(); }
 });
@@ -30,7 +30,7 @@ test('sign-in overlays the current planner, traps focus and preserves an unsent 
   await entry.click();
   const dialog = page.getByRole('dialog', { name: 'Welcome back.', exact: true });
   await expect(dialog).toBeVisible(); await expect(page).toHaveURL(/sign-in$/);
-  await expect(dialog.getByLabel('Email', { exact: true })).toBeFocused();
+  await expect(dialog.getByLabel('Username or email', { exact: true })).toBeFocused();
   expect(await page.locator('#main').evaluate(el => !!el.closest('[inert]'))).toBe(true);
   for (let i = 0; i < 12; i++) { await page.keyboard.press('Tab'); expect(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]'))).toBe(true); }
   await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible(); await expect(page).toHaveURL(/dashboard$/);
@@ -45,16 +45,16 @@ test('direct auth links support keyboard mode switching, password visibility and
   await dialog.getByRole('tab', { name: 'Sign in', exact: true }).focus();
   await page.keyboard.press('ArrowRight'); await expect(page).toHaveURL(/sign-up$/);
   await expect(dialog.getByRole('tab', { name: 'Create account', exact: true })).toBeFocused();
-  await expect(dialog.getByLabel('First name', { exact: true })).toBeVisible();
+  await expect(dialog.getByLabel('Your name', { exact: true })).toBeVisible();
   await page.keyboard.press('ArrowLeft'); await expect(page).toHaveURL(/sign-in$/);
   await expect(dialog.getByRole('tab', { name: 'Sign in', exact: true })).toBeFocused();
-  await expect(dialog.getByLabel('First name', { exact: true })).toHaveCount(0);
-  await dialog.getByLabel('Email', { exact: true }).fill('synthetic@example.test');
+  await expect(dialog.getByLabel('Your name', { exact: true })).toHaveCount(0);
+  await dialog.getByLabel('Username or email', { exact: true }).fill('synthetic@example.test');
   await dialog.getByLabel('Password', { exact: true }).fill('Synthetic-password-123456');
   await dialog.getByRole('button', { name: 'Show password', exact: true }).click(); await expect(dialog.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text');
   await dialog.getByRole('button', { name: 'Hide password', exact: true }).click();
   await dialog.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(dialog.getByRole('alert')).toContainText('Check your email and password'); await expect(dialog.getByRole('alert')).not.toContainText('private provider detail');
+  await expect(dialog.getByRole('alert')).toContainText('Check your username or email and password'); await expect(dialog.getByRole('alert')).not.toContainText('private provider detail');
   await dialog.getByRole('button', { name: 'Close dialog' }).click(); await expect(page).toHaveURL(/\/$/);
 });
 
@@ -93,4 +93,14 @@ test('content cards stay still on hover and auth respects reduced motion and lar
   const dialog = page.getByRole('dialog'); await dialog.getByRole('button', { name: 'Create account', exact: true }).scrollIntoViewIfNeeded();
   expect(await dialog.evaluate(el => el.scrollWidth > el.clientWidth + 1)).toBe(false);
   await page.keyboard.press('Escape'); await expect(dialog).not.toBeVisible();
+});
+
+for (const [label, body, status] of [['empty', '', 500], ['HTML gateway error', '<html>private upstream details</html>', 502]] as const) test(`signup handles an ${label} response and preserves the form`, async ({ page }) => {
+  await page.route('**/api/auth/sign-up/email', route => route.fulfill({status,contentType:'text/html',body}));
+  await page.goto('/sign-up'); const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Your name',{exact:true}).fill('Synthetic Retry'); await dialog.getByLabel('Username',{exact:true}).fill('synthetic_retry'); await dialog.getByLabel('Email',{exact:true}).fill('synthetic-retry@example.test'); await dialog.getByLabel('Password',{exact:true}).fill('Synthetic-retry-password-123');
+  await dialog.getByRole('button',{name:'Create account',exact:true}).click();
+  await expect(dialog.getByRole('alert')).toHaveText('The account service is temporarily unavailable. Please try again later.');
+  await expect(dialog.getByLabel('Email',{exact:true})).toHaveValue('synthetic-retry@example.test'); await expect(dialog.getByRole('button',{name:'Create account',exact:true})).toBeEnabled();
+  await expect(dialog).not.toContainText('JSON.parse'); await expect(dialog).not.toContainText('private upstream');
 });

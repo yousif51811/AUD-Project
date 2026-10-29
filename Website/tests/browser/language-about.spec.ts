@@ -27,14 +27,14 @@ test('switching language preserves the current draft, task completion and appear
 
 test('Arabic sign-in can change language inside the focus trap without clearing fields', async ({page}) => {
   await page.goto('/sign-in'); const dialog = page.getByRole('dialog');
-  await dialog.getByLabel('Email', {exact:true}).fill('fictional@example.test');
+  await dialog.getByLabel('Username or email', {exact:true}).fill('fictional@example.test');
   await dialog.getByRole('button', {name:arabic}).click();
   await expect(dialog).toHaveAccessibleName('أهلًا بعودتك.');
-  await expect(dialog.getByLabel('البريد الإلكتروني', {exact:true})).toHaveValue('fictional@example.test');
-  await expect(dialog.getByLabel('البريد الإلكتروني', {exact:true})).toHaveAttribute('dir','ltr');
+  await expect(dialog.getByLabel('اسم المستخدم أو البريد الإلكتروني', {exact:true})).toHaveValue('fictional@example.test');
+  await expect(dialog.getByLabel('اسم المستخدم أو البريد الإلكتروني', {exact:true})).toHaveAttribute('dir','ltr');
   for(let i=0;i<12;i++){await page.keyboard.press('Tab');expect(await page.evaluate(()=>!!document.activeElement?.closest('[role="dialog"]'))).toBe(true);}
   await dialog.getByRole('button', {name:english}).click();
-  await expect(dialog.getByLabel('Email', {exact:true})).toHaveValue('fictional@example.test');
+  await expect(dialog.getByLabel('Username or email', {exact:true})).toHaveValue('fictional@example.test');
   await page.keyboard.press('Escape'); await expect(dialog).toHaveCount(0);
 });
 

@@ -10,6 +10,7 @@ model User {
 id String @id @default(cuid())
 name String
 email String @unique
+username String? @unique
 ageGroup String @default("adult")
 relationship String @default("")
 emailVerified Boolean @default(false)
@@ -100,6 +101,7 @@ model FamilyInvitation {
  tokenHash String @unique
  email String
  ageGroup String
+ role String @default("MEMBER")
  expiresAt DateTime
  acceptedAt DateTime?
  revokedAt DateTime?
