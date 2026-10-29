@@ -65,3 +65,11 @@ describe('shared Gemini boundary', () => {
     mocks.generate.mockRejectedValue(new DOMException('Cancelled.','AbortError'));expect((await aiAnswerResponse(request())).status).toBe(499);
   });
 });
+
+it('validates management proposals through shared Gemini without executing workspace commands',async()=>{
+ const operations=[{tool:'calendar.create',event:{title:'Synthetic event',date:'2026-10-30',start:'17:00',end:'18:00',category:'Study',assigneeIds:['omar']}}];
+ mocks.generate.mockResolvedValue(JSON.stringify({...valid,operations}));
+ const response=await aiAnswerResponse(request({...input,management:{actorId:'omar',role:'OWNER',today:'2026-10-29',timezone:'Asia/Dubai'}}));
+ expect(response.status).toBe(200);expect((await response.json()).operations).toEqual(operations);
+ expect(mocks.generate.mock.calls[0][1]).toContain('calendar.create');expect(mocks.generate.mock.calls[0][1]).toContain('Asia/Dubai');
+});

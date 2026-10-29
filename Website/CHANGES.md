@@ -1,3 +1,12 @@
+# Assistant management commands
+
+- Added 33 typed, allowlisted commands covering calendar/tasks, care, keepsakes, study/family settings, invitations/members/roles, personal preferences, check-ins/availability, rotations and shared-change responses. Shared Gemini and personal providers return the same validated proposal format.
+- Added inline change previews, local name resolution, explicit confirmation/dismissal, stale-state/permission checks, and awaited save/request outcomes. No arbitrary code, endpoint or credential tools are exposed; existing AI-context opt-in is preserved.
+- Shared the encrypted persistence and acceptance code between manual and assistant controls. Former assignees now retain acceptance rights when assignments change. Shared commitments are confirmed separately from other edits to avoid dropping part of a mixed request. Added owner-only Member/Read-only role updates without a schema migration.
+- Fixed sample planner restoration across full-page navigation so confirmed agent changes survive reloads. Added bilingual management guidance/previews and regression coverage. No application deployment, dependency change or additional database migration is needed for these tools.
+
+---
+
 # Signup failure handling
 
 - Signup no longer attempts to parse every failed response as JSON. Empty/malformed/gateway responses show stable bilingual guidance, preserve the form and allow retry; known username/email conflicts receive specific messages.

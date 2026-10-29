@@ -12,7 +12,7 @@ test('shared Gemini sends directly with policy links and requires action confirm
  await expect(page.locator('#assistant-policy').getByRole('link',{name:'Privacy Policy'})).toHaveAttribute('href','https://policies.google.com/privacy');
  await page.getByLabel('Ask about your week').fill('Help us make the afternoon calmer');expect(calls).toHaveLength(0);
  await page.getByLabel('Ask about your week').press('Enter');await expect(page.getByText(response.answer,{exact:true})).toBeVisible();await expect(page.getByRole('dialog')).toHaveCount(0);
- expect(calls).toHaveLength(1);expect(Object.keys(calls[0]).sort()).toEqual(['facts','language','memberIds','question']);expect(JSON.stringify(calls)).not.toMatch(/apiKey|systemInstruction|endpoint/);
+ expect(calls).toHaveLength(1);expect(Object.keys(calls[0]).sort()).toEqual(['facts','language','management','memberIds','question']);expect(Object.keys(calls[0].management as object).sort()).toEqual(['actorId','role','timezone','today']);expect(JSON.stringify(calls)).not.toMatch(/apiKey|systemInstruction|endpoint/);
  await expect(page.getByLabel('Ask about your week')).toHaveValue('');await expect(page.locator('.family-task-list')).not.toContainText(response.actions[0].title);
  await page.getByRole('button',{name:'Confirm these actions',exact:true}).click();await expect(page.locator('.family-task-list')).toContainText(response.actions[0].title);
 });

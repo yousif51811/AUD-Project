@@ -19,16 +19,18 @@ import { DEMO_ANSWERS, demoCare, demoMemories, demoProfile, demoSchedule, demoSt
 import { analyze } from '@/lib/recommendations';
 import { addActionsToPlan, generatePlan } from '@/lib/plan';
 import { applyProposals as applyOpt } from '@/lib/scheduleOptimizer';
-import { todayIndex, toMin } from '@/lib/time';
+import { todayIndex } from '@/lib/time';
 import { KEYS, isArray, isObject, load, save, remove, storageAvailable, type KVStore } from '@/lib/storage';
 import { isComplete } from '@/lib/scoring';
 import { appendQuickAction } from '@/lib/actions';
 import { AppContext as Ctx } from './appContext';
 import { useDisplay } from '@/lib/display';
 import { useWorkspace } from '@/workspace/Workspace';
-import { hydrateState, splitState } from '@/workspace/records';
+import { hydrateState } from '@/workspace/records';
 import { dateForDay, householdDate } from '@/lib/dates';
-import { proposalCalendar } from '@/workspace/proposals';
+import { persistChanges } from '@/workspace/persistChanges';
+import { agentState, affectedMembers } from '@/workspace/agent-state';
+import type { AgentOperation } from '@/lib/model/operations';
 import { canonical } from '@/lib/canonical';
 import { uid } from '@/lib/sanitize';
 
@@ -136,6 +138,7 @@ function syncCare(care: CareState, events: ScheduleEvent[]): CareState {
 }
 
 export interface AppApi extends AppState {
+  applyAgentChanges: (operations: AgentOperation[]) => Promise<boolean>;
   result: AssessmentResult | null;
   today: DayIndex;
   canUndoSchedule: boolean;
@@ -172,7 +175,7 @@ export interface AppApi extends AppState {
 export function AppProvider({ children }: { children: ReactNode }) {
   const workspace = useWorkspace();
   const [display]=useDisplay(workspace.actorId);
-  const [state, setState] = useState<AppState>(() => demoState());
+  const [state, setState] = useState<AppState>(() => { try { const saved=sessionStorage.getItem('familymind:demo:v2');return saved?JSON.parse(saved):demoState(); } catch { return demoState(); } });
   const lastPersisted = useRef('');
   const syncing = useRef(false);
   const baseline = useRef<AppState>(state);
@@ -202,42 +205,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const timer=setTimeout(()=>{void (async()=>{
       syncing.current=true;
       try{
-        const previous=baseline.current;
-        const actor=workspace.actorId;
-        const changedEvents=state.schedule.filter(e=>canonical(e)!==canonical(previous.schedule.find(x=>x.id===e.id)??null));
-        const changedActions=(state.plan?.actions??[]).filter(e=>canonical(e)!==canonical(previous.plan?.actions.find(x=>x.id===e.id)??null));
-        const removedEvents=previous.schedule.filter(e=>!state.schedule.some(x=>x.id===e.id));
-        const removedActions=(previous.plan?.actions??[]).filter(e=>!state.plan?.actions.some(x=>x.id===e.id));
-        const affected=[...new Set([...changedEvents.flatMap(e=>e.assigneeIds),...changedActions.flatMap(e=>e.participantIds),...removedEvents.flatMap(e=>e.assigneeIds),...removedActions.flatMap(e=>e.participantIds)])].filter(id=>id!==actor&&workspace.members.some(m=>m.userId===id&&m.status==='ACTIVE'));
-        if(affected.length){
-          const calendar=proposalCalendar(previous.schedule,state.schedule,workspace.records,workspace.family!.id);
-          await workspace.save('proposal',crypto.randomUUID(),{title:'Review a proposed plan change',beforePlan:previous.plan,afterPlan:state.plan,beforeSchedule:calendar.before,afterSchedule:calendar.after,baseVersions:Object.fromEntries(workspace.records.filter(r=>r.kind==='plan'||calendar.recordIds.includes(r.id)).map(r=>[r.id,r.version])),requiredUserIds:affected,acceptedUserIds:[],status:'pending',createdAt:new Date().toISOString(),audience:'selected'}, {recipientIds:[actor,...affected],editorIds:[actor,...affected]});
-          lastPersisted.current=canonical(previous);setState(previous);workspace.setError('Your proposed changes were sent for acceptance. The shared plan has not changed.');return;
-        }
-        const currentRows=splitState(state),oldRows=splitState(previous);
-        const all=workspace.members.filter(m=>m.status==='ACTIVE').map(m=>m.userId);
-        const adults=workspace.members.filter(m=>m.status==='ACTIVE'&&m.role!=='CHILD').map(m=>m.userId);
-        const changes:import('@/workspace/Workspace').RecordChange[]=[];
-        for(const row of currentRows){
-          if(canonical(row.data)===canonical(oldRows.find(r=>r.id===row.id)?.data??null))continue;
-          const privateSlice=['draft','student','assessment'].includes(row.kind);
-          const memory=row.kind==='memory';const visibility=memory?String(row.data.visibility):'';
-          const id=workspace.family!.id+':'+row.id+(privateSlice?':'+actor:'');
-          const stored=workspace.records.find(r=>r.id===id);
-          const audience=memory?(visibility==='Only me'?'private':visibility==='Selected members'?'selected':'family'):String(stored?.data.audience??(privateSlice?'private':'family'));
-          const recipients=audience==='private'?[actor]:audience==='selected'?(memory?[actor,...(row.data.tagIds as string[]??[])]:stored?.recipientIds??[actor]):all;
-          changes.push({kind:row.kind,id,data:{...row.data,audience},recipientIds:recipients,editorIds:audience==='family'&&row.kind!=='memory'&&row.kind!=='profile'?all:row.kind==='profile'?(stored?.editorIds??adults):[actor]});
-          if(row.kind==='student'){
-            const student=state.student,summary:Record<string,unknown>={updatedAt:new Date().toISOString(),audience:Object.values(student.shares).some(Boolean)?'family':'private'};
-            if(student.shares.workload)summary.workloadMinutes=state.schedule.filter(e=>e.assigneeIds.includes(actor)&&e.category==='Study').reduce((n,e)=>n+Math.max(0,toMin(e.end)-toMin(e.start)),0);
-            if(student.shares.exams)summary.exams=state.schedule.filter(e=>e.assigneeIds.includes(actor)&&e.exam).map(e=>({title:e.title,date:e.date,day:e.day}));
-            if(student.shares.sleep&&student.sleepLog.length)summary.sleepAverage=student.sleepLog.reduce((n,h)=>n+h,0)/student.sleepLog.length;
-            if(student.shares.support)summary.supportRequest=student.supportRequest;
-            changes.push({kind:'student-summary',id:workspace.family!.id+':student-summary:'+actor,data:summary,recipientIds:Object.values(student.shares).some(Boolean)?all:[actor],editorIds:[actor]});
-          }
-        }
-        for(const row of oldRows.filter(r=>!currentRows.some(x=>x.id===r.id))){const suffix=['draft','student','assessment'].includes(row.kind)?':'+actor:'';changes.push({kind:row.kind,id:workspace.family!.id+':'+row.id+suffix,data:row.data,deleted:true});}
-        await workspace.saveMany(changes);
+        const proposed = await persistChanges(baseline.current,state,workspace);
+        if(proposed){lastPersisted.current=canonical(baseline.current);setState(baseline.current);workspace.setError('Your proposed changes were sent for acceptance. The shared plan has not changed.');return;}
         if(captured===epoch.current){baseline.current=state;lastPersisted.current=canonical(state);}
       }catch(e){workspace.setError((e as Error).message);if(captured===epoch.current)setState(baseline.current);}
       finally{syncing.current=false;}
@@ -281,6 +250,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
       clearData: () => { setUndo([]); setState(emptyState()); },
       completeOnboarding: (p) => { setUndo([]); setState((s) => completeHousehold(s, p)); },
+      applyAgentChanges: async (operations) => {
+        if(syncing.current || (workspace.mode==='account' && canonical(state)!==lastPersisted.current)) throw new Error('Changes are still saving. Please wait before confirming.');
+        if(workspace.mode==='account' && (!workspace.identity || !workspace.family || workspace.family.role==='VIEWER')) throw new Error('Your membership cannot make this change.');
+        const captured=epoch.current, next=agentState(state,operations);
+        if(workspace.mode==='account' && affectedMembers(state,next).some(id=>id!==workspace.actorId)) {
+          if(operations.some(op=>!op.tool.startsWith('calendar.')&&!op.tool.startsWith('tasks.')))throw new Error('Confirm shared commitments separately from other changes.');
+          if(operations.some(op=>'id' in op&&op.tool.startsWith('calendar.')&&workspace.records.find(r=>r.data.id===op.id)?.data.audience!=='family'))throw new Error('Change selected-recipient commitments in Calendar with their named members.');
+        }
+        syncing.current=true;
+        try {
+          const proposed=workspace.mode==='account' ? await persistChanges(state,next,workspace) : false;
+          if(captured!==epoch.current)throw new Error('The active family changed. Ask for a new proposal.');
+          if(!proposed){if(workspace.mode==='demo')try{sessionStorage.setItem('familymind:demo:v2',JSON.stringify(next));}catch{/* ephemeral sample */}baseline.current=next;lastPersisted.current=canonical(next);setState(next);}
+          return proposed;
+        } finally {syncing.current=false;}
+      },
       updateProfile: (fn) => setState((s) => (s.profile ? { ...s, profile: fn(s.profile) } : s)),
       setDraft: (d) => patch({ draft: d }),
       submitAssessment: (rec) => setState((s) => ({ ...s, assessment: rec, draft: {} })),

@@ -3,8 +3,7 @@ import { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import { useApp } from '@/state/store';
 import { useWorkspace } from '@/workspace/Workspace';
-import { canonical } from '@/lib/canonical';
-import type { ScheduleEvent, WeeklyPlan } from '@/types';
+import { respondToRequest } from '@/workspace/requests';
 export default function Community() {
   useLanguage();
     const app = useApp(), w = useWorkspace(), location = useLocation();
@@ -23,40 +22,7 @@ export default function Community() {
     } };
     const pending = w.records.filter(r => r.kind === 'proposal' && r.data.status === 'pending');
     const quiet = (() => { const time = new Date().toTimeString().slice(0, 5); return preferences.quietStart > preferences.quietEnd ? time >= preferences.quietStart || time < preferences.quietEnd : time >= preferences.quietStart && time < preferences.quietEnd; })();
-    const accept = async (id: string, yes: boolean) => {
-        const proposal = w.records.find(r => r.id === id)!;
-        const required = proposal.data.requiredUserIds as string[], accepted = proposal.data.acceptedUserIds as string[];
-        if (!required.includes(w.actorId))
-            throw new Error('This request needs the named member’s acceptance.');
-        if (!yes) {
-            await w.save('proposal', id, { ...proposal.data, status: 'declined' }, { expectedVersion: proposal.version });
-            return;
-        }
-        const next = [...new Set([...accepted, w.actorId])];
-        if (required.every(x => next.includes(x))) {
-            const versions = proposal.data.baseVersions as Record<string, number>;
-            for (const [recordId, version] of Object.entries(versions)) {
-                if (w.records.find(r => r.id === recordId)?.version !== version)
-                    throw new Error('The shared plan changed. Ask the sender for an updated proposal.');
-            }
-            const changes: import('@/workspace/Workspace').RecordChange[] = [];
-            const family = w.family!;
-            const before = proposal.data.beforeSchedule as ScheduleEvent[], after = proposal.data.afterSchedule as ScheduleEvent[];
-            const plan = proposal.data.afterPlan as WeeklyPlan | null;
-            if (plan && canonical(plan) !== canonical(proposal.data.beforePlan))
-                changes.push({ kind: 'plan', id: family.id + ':slice-plan', data: { ...plan, audience: 'family' }, expectedVersion: versions[family.id + ':slice-plan'] ?? 0, recipientIds: w.mode === 'demo' ? app.profile!.members.map(m => m.id) : w.members.filter(m => m.status === 'ACTIVE').map(m => m.userId), editorIds: w.members.filter(m => m.status === 'ACTIVE').map(m => m.userId) });
-            for (const event of after.filter(e => canonical(e) !== canonical(before.find(x => x.id === e.id) ?? null)))
-                changes.push({ kind: 'event', id: family.id + ':' + event.id, data: { ...event, audience: 'family' }, expectedVersion: versions[family.id + ':' + event.id] ?? 0, recipientIds: w.mode === 'demo' ? app.profile!.members.map(m => m.id) : w.members.filter(m => m.status === 'ACTIVE').map(m => m.userId), editorIds: w.members.filter(m => m.status === 'ACTIVE').map(m => m.userId) });
-            for (const event of before.filter(e => !after.some(x => x.id === e.id)))
-                changes.push({ kind: 'event', id: family.id + ':' + event.id, data: event as unknown as Record<string, unknown>, expectedVersion: versions[family.id + ':' + event.id], deleted: true });
-            changes.push({ kind: 'proposal', id, data: { ...proposal.data, acceptedUserIds: next, status: 'accepted' }, expectedVersion: proposal.version });
-            await w.saveMany(changes);
-            setMessage('Accepted changes saved together.');
-            return;
-        }
-        await w.save('proposal', id, { ...proposal.data, acceptedUserIds: next, status: required.every(x => next.includes(x)) ? 'accepted' : 'pending' }, { expectedVersion: proposal.version });
-        setMessage('Your response was saved.');
-    };
+    const accept = async (id:string,yes:boolean) => { setMessage(await respondToRequest(w,app,id,yes)); };
     return <div className="stack stack-lg"><header className="planner-heading"><div><p className="planner-date">{t("A little attention goes a long way")}</p><h1>{notifications ? t("Your reminders & requests.") : t("A moment for yourself.")}</h1><p>{notifications ? t("See what needs your attention, without constant interruptions.") : t("Choose what to record and what, if anything, you want to share.")}</p></div></header>{error && <p className="notice notice-safety" role="alert">{t(error)}</p>}{message && <p role="status" className="notice notice-info">{t(message)}</p>}
  {notifications ? <><section className="daily-paper stack"><h2>{t("Reminders")}</h2><p className="hint">{t("Calculated while the website is open. No closed-browser push, email delivery or emergency monitoring.")}</p><label><input type="checkbox" checked={preferences.enabled} onChange={e => { const v = { ...preferences, enabled: e.target.checked }; setPreferences(v); localStorage.setItem('familymind:notifications:v1', JSON.stringify(v)); }}/>{t(" Enable in-app reminders")}</label><div className="grid grid-2">{(['quietStart', 'quietEnd'] as const).map(key => <label className="field" key={key}>{key === 'quietStart' ? t("Quiet hours start") : t("Quiet hours end")}<input className="input" type="time" value={preferences[key]} onChange={e => { const v = { ...preferences, [key]: e.target.value }; setPreferences(v); localStorage.setItem('familymind:notifications:v1', JSON.stringify(v)); }}/></label>)}</div><label><input type="checkbox" checked={preferences.connection} onChange={e => { const v = { ...preferences, connection: e.target.checked }; setPreferences(v); localStorage.setItem('familymind:notifications:v1', JSON.stringify(v)); }}/>{t(" Include a gentle daily reminder to connect with family")}</label>
  {!preferences.enabled ? <p>{t("Reminders are paused.")}</p> : quiet ? <p>{t("Quiet hours are active. Requests remain available below.")}</p> : <><ul>{(app.plan?.actions ?? []).filter(a => !a.done && a.day === app.today && a.participantIds.includes(w.actorId)).map(a => <li key={a.id}>{a.title} · {a.minutes}{t(" minutes")}</li>)}</ul>{preferences.connection && <p>{t("When it suits you, ask someone in your family how their day is going.")}</p>}<p className="hint">{t("Only commitments recorded in this workspace appear here.")}</p></>}</section>

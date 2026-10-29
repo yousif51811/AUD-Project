@@ -3,7 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { APPEARANCE_KEY, createAppearanceStore, resolveAppearance } from '@/lib/appearance';
 
-const appearance = createAppearanceStore(() => typeof window === 'undefined' ? undefined : window.localStorage);
+export const appearance = createAppearanceStore(() => typeof window === 'undefined' ? undefined : window.localStorage);
 const systemQuery = '(prefers-color-scheme: dark)';
 
 export function AppearanceControl() {

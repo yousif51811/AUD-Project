@@ -1,3 +1,6 @@
+import { AgentProposal } from './AgentProposal';
+import { agentSnapshot } from '@/workspace/agent';
+import { householdDate } from '@/lib/dates';
 import { t, useLanguage } from '@/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -18,6 +21,8 @@ const selectionName = (selection: AISelection) => selection === 'server' ? t(SER
 const starterIcons = [ListChecks, CalendarClock, HeartHandshake, Leaf];
 interface AssistantRequest {
     question: string;
+    snapshot: string;
+    management: ServerAIRequest["management"];
     system: string;
     connection?: AIConnection;
     selection: AISelection;
@@ -32,6 +37,7 @@ interface Message {
     result: AssistantAnswer;
     source: string;
     added?: boolean;
+    snapshot?: string;
 }
 export function FamilyAssistant() {
   const { language } = useLanguage();
@@ -42,6 +48,7 @@ export function FamilyAssistant() {
     useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages.length, busy]);
     useEffect(() => { const clear = () => { generation.current++; controller.current?.abort(); cancelAIRequests(); setMessages([]); setBusy(false); }; window.addEventListener('familymind:clear-ai', clear); return () => { clear(); window.removeEventListener('familymind:clear-ai', clear); }; }, []);
     const facts = () => serverRequestSchema.shape.facts.parse(boundedFacts(w.mode === 'demo' ? [{ id: 'sample-profile', kind: 'profile', data: app.profile ?? {} }, { id: 'sample-plan', kind: 'plan', data: app.plan ?? {} }, { id: 'sample-calendar', kind: 'calendar', data: {events:app.schedule} }] : contextFor(w.records, true, w.actorId, w.members.filter(m=>m.status==='ACTIVE').map(m=>m.userId))));
+    const management = () => ({ actorId:w.actorId, role:(w.mode==='demo'?'DEMO':w.family?.role??'MEMBER') as 'DEMO'|'OWNER'|'MEMBER'|'VIEWER'|'CHILD', today: (()=>{const d=householdDate(new Date(),w.family?.timezone);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})(), timezone:w.family?.timezone??Intl.DateTimeFormat().resolvedOptions().timeZone });
     const active = ai.selected === 'server' ? undefined : ai.connections[ai.selected];
     const connectionSignature = ai.selected === 'server' ? `${ai.server?.model}:${ai.server?.available}` : active ? `${active.provider}:${active.model}:${active.verifiedAt}` : '';
     const memberIds = () => app.profile?.members.map(member => member.id) ?? [];
@@ -52,7 +59,7 @@ export function FamilyAssistant() {
     }, [ai.selected, connectionSignature, language]);
     const perform = async (requestContext: AssistantRequest) => {
         let changed = true;
-        try { changed = systemPrompt(facts(), language) !== requestContext.system || canonical(memberIds()) !== canonical(requestContext.memberIds) || ai.selected !== requestContext.selection || (requestContext.selection === 'server' ? !ai.server?.available || ai.server.model !== requestContext.model : ai.connections[requestContext.selection]?.apiKey !== requestContext.connection?.apiKey); }
+        try { changed = systemPrompt(facts(), language, management()) !== requestContext.system || canonical(memberIds()) !== canonical(requestContext.memberIds) || ai.selected !== requestContext.selection || (requestContext.selection === 'server' ? !ai.server?.available || ai.server.model !== requestContext.model : ai.connections[requestContext.selection]?.apiKey !== requestContext.connection?.apiKey); }
         catch { /* Do not send stale or invalid context. */ }
         if (changed) { setError('Your records or AI connection changed. Please send your question again.'); return; }
         const request = ++generation.current;
@@ -60,7 +67,7 @@ export function FamilyAssistant() {
         try {
             setStatus(t('Waiting for {provider}… Your planner remains available.', {provider: selectionName(requestContext.selection)}));
             const text = requestContext.selection === 'server'
-              ? JSON.stringify(await serverAnswer({question:requestContext.question,language,facts:requestContext.facts,memberIds:requestContext.memberIds}, controller.current.signal))
+              ? JSON.stringify(await serverAnswer({question:requestContext.question,language,facts:requestContext.facts,memberIds:requestContext.memberIds,management:requestContext.management}, controller.current.signal))
               : await providerAnswer(requestContext.connection!, requestContext.system, requestContext.question, controller.current.signal);
             if (request !== generation.current) return;
             let result: AssistantAnswer;
@@ -68,8 +75,8 @@ export function FamilyAssistant() {
             catch { throw new Error('The assistant returned an invalid suggestion. Nothing was changed. Try again or choose another model.'); }
             setInput(current => current.trim() === requestContext.question ? '' : current);
             const source = t('Cloud AI · {provider}', {provider: selectionName(requestContext.selection)});
-            setMessages(xs => [...xs, { id: uid('chat'), question: requestContext.question, result, source }].slice(-20));
-            if (w.mode === 'account') await w.save('chat', crypto.randomUUID(), { question: requestContext.question, answer: result.answer, source: requestContext.selection, createdAt: new Date().toISOString() });
+            setMessages(xs => [...xs, { id: uid('chat'), question: requestContext.question, result, source, snapshot:requestContext.snapshot }].slice(-20));
+            if (w.mode === 'account' && w.family?.role !== 'VIEWER') await w.save('chat', crypto.randomUUID(), { question: requestContext.question, answer: result.answer, source: requestContext.selection, createdAt: new Date().toISOString() });
         } catch (e) {
             if (request === generation.current && (e as Error).name !== 'AbortError') setError((e as Error).message || 'The assistant could not produce a valid answer. Nothing was changed.');
         } finally { if (request === generation.current) { setBusy(false); setStatus(''); } }
@@ -95,7 +102,7 @@ export function FamilyAssistant() {
         }
         try {
         const records = facts();
-        void perform({ question, system: systemPrompt(records, language), selection:ai.selected, model:ai.selected === 'server' ? ai.server!.model : active!.model, connection: active ? {...active} : undefined, facts:records, memberIds:memberIds(), recordIds: records.map(r => r.id) });
+        void perform({ question, snapshot:agentSnapshot(app,w), management:management(), system: systemPrompt(records, language, management()), selection:ai.selected, model:ai.selected === 'server' ? ai.server!.model : active!.model, connection: active ? {...active} : undefined, facts:records, memberIds:memberIds(), recordIds: records.map(r => r.id) });
         } catch { setError('This assistant context could not be prepared. Nothing was sent. Try reloading the sample.'); }
     };
     const apply = (m: Message) => { setError(''); const errors = app.addQuickActions(m.result.actions.map(a => ({ ...a, day: a.day as import('@/types').DayIndex, id: uid('action'), done: false, source: 'coach' as const }))); if (errors.length) {
@@ -113,6 +120,7 @@ export function FamilyAssistant() {
           {messages.map(m => <article className="assistant-exchange" key={m.id}>
             <p className="assistant-question">{m.question}</p>
             <div className="assistant-answer"><span className="answer-sprout" aria-hidden><Leaf size={17}/></span><div className="stack stack-sm"><p style={{ whiteSpace: 'pre-line' }}>{m.result.answer}</p><span className="answer-source">{t(m.source)}</span>
+              {!!m.result.operations?.length && <AgentProposal operations={m.result.operations} snapshot={m.snapshot??''}/>}
               {m.result.actions.length > 0 && <><h3>{t("Proposed actions — review before adding")}</h3>{m.result.actions.map((a, i) => <div className="card stack stack-sm" key={i}><label className="field">{t("Action")}<input className="input" value={a.title} onChange={e => setMessages(xs => xs.map(x => x.id !== m.id ? x : { ...x, result: { ...x.result, actions: x.result.actions.map((v, n) => n === i ? { ...v, title: e.target.value } : v) } }))}/></label><p>{t(DAY_NAMES[a.day])} · {a.minutes}{t(" minutes · ")}{a.participantIds.map(id => app.profile?.members.find(p => p.id === id)?.name).join(', ')}</p><p className="hint">{a.reason}</p></div>)}<button className="btn btn-primary" disabled={m.added} onClick={() => apply(m)}>{m.added ? t("Submitted — check Our week / requests") : t("Confirm these actions")}</button><p className="hint">{t("Other members must accept changes to their commitments. No calendar event is automatically moved.")}</p></>}
             </div></div>
           </article>)}
@@ -127,6 +135,7 @@ export function FamilyAssistant() {
         <button className="assistant-send" disabled={!input.trim() || busy} aria-label={t("Ask the assistant")}><ArrowUp size={23} aria-hidden/></button>
       </form>
       <p id="assistant-policy" className="assistant-policy hint">{t('By sending a message to this assistant, you agree to ')}<a href={policy.termsUrl} target="_blank" rel="noopener noreferrer">{t('{provider} Terms of Service', {provider: policy.name})}</a>{t(' and ')}<a href={policy.privacyUrl} target="_blank" rel="noopener noreferrer">{t('Privacy Policy')}</a>{'. '}<span>{t(ai.selected === 'server' ? 'Your message and AI-enabled records go through FamilyMind’s backend to Google.' : ai.selected === 'openrouter' ? 'Your message and AI-enabled records go directly to OpenRouter and its model host.' : 'Your message and AI-enabled records go directly to your selected provider.')}</span></p>
+      <details className="assistant-disclosure"><summary>{t('Manage your family from here')}</summary><p>{t('Ask me to add, move or remove calendar events; manage tasks, care reminders, keepsakes and study settings; invite people or manage family access; change your family, language or appearance preferences. I will show the changes before you confirm.')}</p><p>{t('For example: “Add a study session for me on Friday from 17:00 to 18:00” or “Invite alex@example.com as an adult member”. Existing items can be named exactly. If details are missing, I will ask.')}</p><p>{t('Only AI-approved records are sent as context. Private content is not shared just to manage it. Account deletion, passwords, provider keys and AI-sharing consent stay in their dedicated controls.')}</p></details>
       <div className="assistant-starters" aria-label={t("Suggested questions")}>{starters.map((text, i) => { const Icon = starterIcons[i]; return <button type="button" key={text} disabled={busy} onClick={() => send(t(text))}><span aria-hidden className="starter-icon" data-tone={i}><Icon size={16}/></span><span className="starter-label">{t(text)}</span><ArrowUpRight size={14} aria-hidden/></button>; })}</div>
       <div className="assistant-toolbar">
         <label className="assistant-mode"><span className="mode-dot" aria-hidden/><span className="sr-only">{t("Answer with")}</span><select value={ai.selected} onChange={e => ai.select(e.target.value as AISelection)} disabled={busy || !ai.ready}><option value="server">{t(SERVER_AI_NAME)}{t(ai.server?.available ? ' · available' : ' · unavailable')}</option>{providerIds.map(id => <option key={id} value={id}>{PROVIDERS[id].name}{ai.connections[id] ? t(" · connected") : t(" · connect")}</option>)}</select></label>

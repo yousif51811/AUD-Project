@@ -121,7 +121,7 @@ export async function handle(request: Request, path: string[]) {
                     const keys = await db.encryptionIdentity.findMany({ where: { userId: { in: [...rows.map(m => m.userId), ...historicSenders] } } });
                     return json([...rows.map(m => ({ ...keys.find(k => k.userId === m.userId), vault: undefined, userId: m.userId, role: m.role, status: m.status, ageGroup: m.user.ageGroup, displayName: m.user.name })), ...keys.filter(k => !rows.some(m => m.userId === k.userId)).map(k => ({ userId: k.userId, publicKey: k.publicKey, signingKey: k.signingKey, role: 'MEMBER', status: 'LEFT', ageGroup: 'adult' }))]);
                 }
-                const input = z.object({ userId: z.string(), operation: z.enum(['approve', 'remove', 'transfer']) }).parse(await body());
+                const input = z.object({ userId: z.string(), operation: z.enum(['approve', 'remove', 'transfer', 'role']), role: z.enum(['MEMBER','VIEWER']).optional() }).parse(await body());
                 if (input.userId === userId)
                     throw new Fault(400, 'Select another family member.');
                 const target = await db.familyMembership.findUnique({ where: { familyId_userId: { familyId: id, userId: input.userId } } });
@@ -132,8 +132,10 @@ export async function handle(request: Request, path: string[]) {
                 const targetUser = await db.user.findUniqueOrThrow({ where: { id: input.userId } });
                 if (input.operation === 'transfer' && !['adult', 'older'].includes(targetUser.ageGroup))
                     throw new Fault(403, 'Transfer ownership to an adult.');
+                if(input.operation === 'role' && (!input.role || target.role === 'OWNER' || targetUser.ageGroup === 'child' || target.status !== 'ACTIVE')) throw new Fault(400, 'Choose an active non-owner adult or teen membership.');
                 await db.$transaction(async (tx) => {
-                    if (input.operation === 'transfer') {
+                    if(input.operation === 'role') await tx.familyMembership.update({where:{id:target.id},data:{role:input.role!}});
+                    else if (input.operation === 'transfer') {
                         await tx.family.update({ where: { id }, data: { ownerId: input.userId } });
                         await tx.familyMembership.update({ where: { id: target.id }, data: { role: 'OWNER' } });
                         await tx.familyMembership.update({ where: { familyId_userId: { familyId: id, userId } }, data: { role: 'MEMBER' } });

@@ -281,3 +281,10 @@
 
 .assistant-policy {margin-block:10px 14px;font-size:.75rem;line-height:1.6;overflow-wrap:anywhere;}
 .assistant-policy a {text-decoration:underline;text-underline-offset:3px;}
+
+/* Stable, readable assistant change previews. */
+.agent-change-fields {display:grid;gap:.55rem;margin:0;}
+.agent-change-fields > div {display:grid;grid-template-columns:minmax(80px,.35fr) minmax(0,1fr);gap:.75rem;}
+.agent-change-fields dt {font-weight:600;color:var(--fg-muted);}
+.agent-change-fields dd {margin:0;min-width:0;}
+.agent-proposal .card {min-width:0;}

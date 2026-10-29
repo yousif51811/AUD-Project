@@ -44,6 +44,12 @@ describe('simple family enrollment permissions', () => {
   expect((await owner.request(`families/${family.id}/members`,{userId:viewer.id,operation:'approve'})).status).toBe(200);
   const record = await encryptRecord({id:crypto.randomUUID(),familyId:family.id,kind:'checkin',version:1,authorId:viewer.id,senderId:viewer.id,editorIds:[viewer.id],recipients:[{userId:viewer.id,...viewer.identity}],payload:{data:{mood:3},cloudAllowed:false}},viewer.identity);
   expect((await viewer.request('records',record)).status).toBe(403);
+  expect((await viewer.request(`families/${family.id}/members`,{userId:owner.id,operation:'role',role:'VIEWER'})).status).toBe(403);
+  expect((await owner.request(`families/${family.id}/members`,{userId:viewer.id,operation:'role',role:'MEMBER'})).status).toBe(200);
+  expect((await db.familyMembership.findUniqueOrThrow({where:{familyId_userId:{familyId:family.id,userId:viewer.id}}})).role).toBe('MEMBER');
+  expect((await owner.request(`families/${family.id}/members`,{userId:viewer.id,operation:'role',role:'VIEWER'})).status).toBe(200);
+  expect((await owner.request(`families/${family.id}/members`,{userId:viewer.id,operation:'role',role:'OWNER'})).status).toBe(400);
+  expect((await viewer.request('records',record)).status).toBe(403);
   expect((await viewer.request(`families/${family.id}/invite`,{target:outsider.email,ageGroup:'adult'})).status).toBe(403);
   const revoked = await (await owner.request(`families/${family.id}/invite`,{target:outsider.email,ageGroup:'adult'})).json();
   const outgoing = await (await owner.request(`families/${family.id}/invite`)).json();

@@ -104,7 +104,7 @@ test('remembered credentials stay encrypted locally and unlock without uploading
   await page.evaluate(() => { const write = Storage.prototype.setItem; Storage.prototype.setItem = function(id, value) { if (id.startsWith('familymind:ai-device:')) throw new DOMException('Storage blocked', 'SecurityError'); return write.call(this, id, value); }; });
   await connect(page, 'groq', 'Groq', true); await expect(page.getByRole('status').filter({hasText:'browser storage could not be updated'})).toBeVisible();
   expect(await page.evaluate(() => JSON.stringify({...localStorage}))).not.toContain(key('groq')); expect(backend.join('\n')).not.toContain(key('groq'));
-  await page.getByRole('button', { name: 'Sign out and lock vault', exact: true }).click(); await page.goto('/dashboard'); await expect(page.getByLabel('Answer with')).toContainText('Groq · connect');
+  await page.getByRole('button', { name: 'Sign out and lock vault', exact: true }).click(); await expect(page).toHaveURL(/\/$/); await page.goto('/dashboard'); await expect(page.getByLabel('Answer with')).toContainText('Groq · connect');
 });
 
 test('Gemini explains an unavailable legacy model and reconnects with the suggested model', async ({ page }) => {

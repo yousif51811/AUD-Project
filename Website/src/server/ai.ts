@@ -70,7 +70,7 @@ export async function aiAnswerResponse(request: Request) {
     if (!session && !anonymous) throw new AIFault(401, 'session', 'Reload the assistant to start a sample session, then review your request again.');
     await consumeAIAllowance(session ? `account:${session.user.id}` : `demo:${anonymous}`);
     if (request.signal.aborted) throw new DOMException('Cancelled.', 'AbortError');
-    const text = await providerAnswer({provider:'gemini',apiKey:process.env.GEMINI_API_KEY!.trim(),model:config.model}, systemPrompt(input.facts, input.language), input.question, request.signal);
+    const text = await providerAnswer({provider:'gemini',apiKey:process.env.GEMINI_API_KEY!.trim(),model:config.model}, systemPrompt(input.facts, input.language, input.management), input.question, request.signal);
     try { return json(parseAnswer(text, input.memberIds, input.facts.map(f => f.id))); }
     catch { throw new AIFault(502, 'response', 'The assistant returned an invalid suggestion. Nothing was changed. Try again or choose another model.'); }
   } catch (error) {

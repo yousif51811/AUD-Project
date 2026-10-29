@@ -1,6 +1,18 @@
 # FamilyMind AI
 
-A fictional-data family wellbeing prototype combining the original warm planner interface with accounts, encrypted synchronization and AI requests sent directly from browsers to user-selected providers. React, TypeScript, Next.js, npm, Prisma and PostgreSQL.
+A fictional-data family wellbeing prototype combining the original warm planner interface with accounts, encrypted synchronization, shared server-side Gemini and optional personal AI providers connected directly from browsers. React, TypeScript, Next.js, npm, Prisma and PostgreSQL.
+
+## Manage the family from the assistant
+
+Home’s assistant supports typed management proposals with **Confirm changes** and **Dismiss proposal** in the conversation. Examples: “Add a study session for me on Friday from 17:00 to 18:00”, “Move Dentist to 16:00”, “Invite alex@example.com as an adult member”, “Confirm access for Sam”, or “Accept this shared calendar request”. Exact item/member names are resolved locally; missing or ambiguous details require another proposal.
+
+Supported commands cover calendar create/edit/delete; task create/edit/complete/delete; care reminders; keepsakes with chosen visibility; study settings; family name/goals/reminder policy/daily limits; invitations, invitation cancellation, member approval/removal, Member/Read-only role changes, ownership transfer and timezone; private check-ins and volunteered availability; responsibility rotations; listing/responding to pending change requests; and personal display, language and appearance preferences. The capability disclosure below the composer explains the available controls.
+
+The selected provider returns validated JSON proposals, not executable code or arbitrary HTTP requests. Shared Gemini and all three personal providers use the same allowlist. Date/time validation, current-record matching and permissions are checked before execution. Previews use locally decrypted content without uploading it as extra model context. Only existing author-approved records go to inference; earlier chat and private record reads are not silently added. The model receives bounded actor/role/date/timezone metadata to interpret “me” and dates, but this metadata grants no authority. Family APIs recheck the authenticated account.
+
+Up to six state changes can be confirmed together; administrative/personal commands are confirmed individually. State changes use the same awaited encrypted persistence as manual controls. Shared calendar/task changes require the affected members’ own acceptance, including people removed from an assignment. The assistant can list/respond to those requests; it cannot accept for another person. Stale proposals, lost permissions and failed saves do not produce a success message. Invitations create a 48-hour link for the owner to share and do not send email. The fictional sample can change its planner but cannot create real memberships/invitations.
+
+Account/family deletion, passwords, encryption recovery, provider keys and author AI-sharing consent stay in their dedicated controls. The assistant cannot grant itself access or change these boundaries. No additional database migration or dependency is required for the assistant tools. Live model tool-selection quality is separate from mocked-provider workflow verification.
 
 ## Optional Google sign-in on Render
 
